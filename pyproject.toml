@@ -1,0 +1,9 @@
+[project]
+name = "against-interpolation"
+version = "0.1.0"
+description = "Generate MapRoulette tasks to retire redundant addr:interpolation lines in Toronto"
+requires-python = ">=3.11"
+dependencies = ["requests"]
+
+[tool.setuptools]
+packages = ["interp"]
