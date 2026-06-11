@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from interp import geo  # noqa: E402
+from interp import hoods  # noqa: E402
 from interp.coverage import _parity_sequence, coverage_for_way  # noqa: E402
 from interp import tasks  # noqa: E402
 
@@ -94,3 +95,22 @@ def test_task_rendering():
     line = tasks.to_line(fc)
     assert line.startswith(chr(0x1e))
     assert "\n" not in line
+
+
+def test_locate_point_in_polygon():
+    # Unit square at (-79.40..-79.39, 43.65..43.66) with a hole in the middle.
+    outer = [(-79.40, 43.65), (-79.39, 43.65), (-79.39, 43.66),
+             (-79.40, 43.66), (-79.40, 43.65)]
+    hole = [(-79.397, 43.653), (-79.393, 43.653), (-79.393, 43.657),
+            (-79.397, 43.657), (-79.397, 43.653)]
+    bbox = (-79.40, 43.65, -79.39, 43.66)
+    polys = [("Testville", [outer, hole], bbox)]
+
+    assert hoods.locate(43.651, -79.399, polys) == "Testville"  # inside
+    assert hoods.locate(43.655, -79.395, polys) is None         # in the hole
+    assert hoods.locate(43.70, -79.395, polys) is None          # outside bbox
+    assert hoods.locate(43.651, -79.50, polys) is None          # outside lon
+
+
+def test_midpoint():
+    assert hoods.midpoint([[43.0, -79.0], [44.0, -80.0]]) == (43.5, -79.5)

@@ -33,7 +33,9 @@ def _housenumbers(cov: dict) -> str:
     return ", ".join(nums)
 
 
-def build_feature_collection(way: dict, cov: dict) -> dict:
+def build_feature_collection(
+    way: dict, cov: dict, neighbourhood: str | None = None
+) -> dict:
     osm_way = f"way/{way['way_id']}"
     coords = [[lon, lat] for lat, lon in way["geometry"]]  # GeoJSON is lon,lat
     properties = {
@@ -44,6 +46,7 @@ def build_feature_collection(way: dict, cov: dict) -> dict:
         "coverage_category": cov["category"],  # kept for build stats / filtering
         "source": way.get("source") or "(none)",
         "housenumbers": _housenumbers(cov),
+        "neighbourhood": neighbourhood or "",
     }
     geometry = (
         {"type": "LineString", "coordinates": coords}

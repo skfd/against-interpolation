@@ -20,11 +20,15 @@ and walks a mapper through three steps:
    takes the way with them); keep an endpoint that is part of a building or
    carries other tags.
 
-Lines whose range can't be read (`unknown`) or with **zero** matching City
-points (`uncovered` — often just outside Toronto's open-data coverage) are
-**excluded from upload** and parked in `data/excluded.geojson` for manual
-review: a task with an empty house-number list gives a mapper nothing to verify
-against.
+Each line is assigned to one of the City's 158 neighbourhoods by
+point-in-polygon on its midpoint (boundaries auto-downloaded from Toronto Open
+Data). Because the neighbourhood polygons union to exactly the city boundary,
+this doubles as the Toronto crop: ways whose midpoint falls in no polygon (the
+fetch bbox bleeds into Mississauga/Vaughan/Markham) go to `data/outside.geojson`
+and get no task. Lines whose range can't be read (`unknown`) or with **zero**
+matching City points (`uncovered`) are likewise held back in
+`data/excluded.geojson` for manual review: a task with an empty house-number
+list gives a mapper nothing to verify against.
 
 ## How it relates to the sibling projects
 
@@ -70,6 +74,7 @@ python run.py create --dry-run
 python run.py create --limit 20      # upload a small first batch
 python run.py create                 # full upload
 python run.py create --name "..."    # override the challenge name (test runs)
+python run.py create --by-neighbourhood   # one challenge per neighbourhood
 ```
 
 Set the API key (PowerShell):
@@ -83,9 +88,11 @@ $env:MAPROULETTE_API_KEY = "<your key>"
 | File | Contents |
 |---|---|
 | `interpolation_ways.json` | raw enumerated ways (geometry + endpoint housenumbers/street) |
-| `tasks.geojson` | RS-delimited MapRoulette tasks (`full`/`partial` coverage only) |
-| `excluded.geojson` | `uncovered`/`unknown` ways held back from upload, for review |
-| `summary.json` | coverage breakdown for the last `build` |
+| `neighbourhoods.geojson` | City neighbourhood boundaries (auto-downloaded) |
+| `tasks.geojson` | RS-delimited MapRoulette tasks (`full`/`partial`, Toronto only, tagged with neighbourhood) |
+| `excluded.geojson` | `uncovered`/`unknown` Toronto ways held back from upload, for review |
+| `outside.geojson` | ways whose midpoint falls outside the city boundary (no task) |
+| `summary.json` | coverage + per-neighbourhood breakdown for the last `build` |
 
 ## Notes
 
