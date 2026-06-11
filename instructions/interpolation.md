@@ -21,4 +21,4 @@ Once every number above is present as a real point/building, delete the `addr:in
 
 Mark **Fixed** when done, **Already Fixed** if someone beat you to it, or **Not an Issue** / **Skip** if you judged that the line should stay.
 
-Report any problems or suggestions to the [Interpolation Elimination Mapping Party forum post](https://community.openstreetmap.org/).
+Report any problems or suggestions to the [Interpolation Elimination Mapping Party forum post](https://community.openstreetmap.org/t/toronto-address-interpolation-elimination-maproullete/144535).
