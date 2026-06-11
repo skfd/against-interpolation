@@ -153,8 +153,16 @@ def cmd_create(args, cfg: Config) -> None:
             props = json.loads(ln.lstrip(chr(0x1e)))["features"][0]["properties"]
             hood = props.get("neighbourhood") or "(unassigned)"
             groups.setdefault(hood, []).append(ln)
+        if args.hoods:
+            wanted = {h.strip().lower() for h in args.hoods.split(",")}
+            missing = wanted - {k.lower() for k in groups}
+            if missing:
+                raise SystemExit(
+                    f"No tasks for requested neighbourhood(s): {', '.join(sorted(missing))}"
+                )
+            groups = {k: v for k, v in groups.items() if k.lower() in wanted}
         print(f"Plan: {len(groups)} neighbourhood challenges under project "
-              f"{project_id} ({len(task_lines)} tasks total):")
+              f"{project_id} ({sum(len(v) for v in groups.values())} tasks total):")
         for hood in sorted(groups):
             print(f"  {len(groups[hood]):>5}  {challenge_name} - {hood}")
     else:
@@ -211,6 +219,8 @@ def main(argv=None) -> None:
     c.add_argument("--limit", type=int, help="upload only the first N tasks")
     c.add_argument("--by-neighbourhood", action="store_true",
                    help="one challenge per neighbourhood instead of one big one")
+    c.add_argument("--hoods",
+                   help="comma-separated neighbourhood filter (with --by-neighbourhood)")
     c.add_argument("--dry-run", action="store_true", help="validate, don't create")
     c.set_defaults(func=cmd_create)
 
