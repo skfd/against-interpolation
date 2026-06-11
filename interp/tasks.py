@@ -4,10 +4,9 @@ record-separator-delimited (one FeatureCollection per line, each prefixed with
 \\u001e) — the line-by-line GeoJSON format MapRoulette ingests.
 
 Each task's single feature is the interpolation LineString, so the task locates
-on the line and an editor can load the way directly. The City point positions
-(the answer to "what replaces this line") are rendered into the
-`addresses_block` property, which the challenge instruction embeds via
-mustache `{{addresses_block}}`.
+on the line and an editor can load the way directly. The City house numbers
+that replace the line are rendered into the `housenumbers` property, which the
+challenge instruction embeds via mustache `{{housenumbers}}`.
 """
 import json
 
@@ -21,34 +20,17 @@ def _range_label(way: dict) -> str:
     return f"{lo}-{hi} ({parity})"
 
 
-def _coverage_label(cov: dict) -> str:
-    cat, p, t = cov["category"], cov["present_count"], cov["total"]
-    if cat == "full":
-        return f"full ({p}/{t} present)"
-    if cat == "partial":
-        return f"partial ({p}/{t} present)"
-    if cat == "uncovered":
-        return f"none (0/{t} present)"
-    return "unknown (could not determine range)"
+def _housenumbers(cov: dict) -> str:
+    """Plain comma-separated list of the house numbers the City has points for.
 
-
-def _addresses_block(cov: dict) -> str:
-    if cov["category"] == "unknown" or not cov["items"]:
-        return "_Range could not be determined from the way's endpoints._"
-    lines = []
-    for it in cov["items"]:
-        n = it["num"]
-        if it["present"]:
-            lat, lon = it["lat"], it["lon"]
-            edit = f"https://www.openstreetmap.org/edit#map=21/{lat:.6f}/{lon:.6f}"
-            lines.append(
-                f"- **{n}** - {it['full']}  "
-                f"({lat:.6f}, {lon:.6f}) [edit]({edit})  "
-                f"`city_id={it['apid']}`"
-            )
-        else:
-            lines.append(f"- **{n}** - NO CITY POINT")
-    return "\n".join(lines)
+    The City data is the ground truth for which addresses are real; the
+    interpolation's in-between numbers are only estimates, so we list what the
+    City actually has rather than enumerating the parity range.
+    """
+    nums = [str(it["num"]) for it in cov["items"] if it["present"]]
+    if not nums:
+        return "_(no City points found in this range)_"
+    return ", ".join(nums)
 
 
 def build_feature_collection(way: dict, cov: dict) -> dict:
@@ -59,12 +41,9 @@ def build_feature_collection(way: dict, cov: dict) -> dict:
         "osm_way": osm_way,
         "street": way.get("street") or "(unknown street)",
         "range": _range_label(way),
-        "coverage": _coverage_label(cov),
-        "coverage_category": cov["category"],
+        "coverage_category": cov["category"],  # kept for build stats / filtering
         "source": way.get("source") or "(none)",
-        "count_present": cov["present_count"],
-        "count_total": cov["total"],
-        "addresses_block": _addresses_block(cov),
+        "housenumbers": _housenumbers(cov),
     }
     geometry = (
         {"type": "LineString", "coordinates": coords}

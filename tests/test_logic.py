@@ -84,9 +84,9 @@ def test_task_rendering():
     fc = tasks.build_feature_collection(way, cov)
     props = fc["features"][0]["properties"]
     assert props["osm_way"] == "way/1"
-    assert props["coverage"].startswith("full")
+    assert props["coverage_category"] == "full"
     assert props["range"] == "1-3 (odd)"
-    assert "1 Main St" in props["addresses_block"]
+    assert props["housenumbers"] == "1, 3"
     assert fc["features"][0]["geometry"]["type"] == "LineString"
     # GeoJSON coordinates are lon,lat
     assert fc["features"][0]["geometry"]["coordinates"][0] == [-79.400, 43.650]

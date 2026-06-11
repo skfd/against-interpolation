@@ -54,10 +54,10 @@ def create_challenge(
         "description": name,
         "instruction": instruction,
         "blurb": "Retire redundant addr:interpolation lines in Toronto.",
-        "checkinComment": "Removed redundant addr:interpolation line (Toronto Open Data points)",
+        "checkinComment": "Removed redundant addr:interpolation line (Toronto Open Data points) #maproulette #toronto-interpolation-cleanup",
         "enabled": True,
-        "difficulty": 2,
-        "requiresLocal": False,
+        "difficulty": 3,  # 1=easy, 2=normal, 3=expert
+        "requiresLocal": True,  # requires local / specialized knowledge
         "parent": project_id,
     }
     resp = s.post(f"{api_base}/challenge", json=payload, timeout=120)
@@ -72,27 +72,36 @@ def add_tasks(
     api_base: str,
     challenge_id: int,
     task_lines: list[str],
-    batch_size: int,
-    delay_s: float = 0.5,
+    delay_s: float = 0.1,
 ) -> None:
-    """Upload RS/newline-delimited task lines to a challenge in batches."""
+    """Upload tasks one FeatureCollection per request.
+
+    MapRoulette's addTasks endpoint parses a single JSON value per PUT, so the
+    U+001E record-separator prefix (and concatenating multiple FeatureCollections
+    in one body) is rejected. We strip the RS and PUT each line individually,
+    matching the proven sibling bikeshare tool.
+    """
     s = _session(_api_key())
     url = f"{api_base}/challenge/{challenge_id}/addTasks"
     total = len(task_lines)
-    for start in range(0, total, batch_size):
-        batch = task_lines[start : start + batch_size]
-        body = "\n".join(batch)
+    ok = 0
+    for i, line in enumerate(task_lines, 1):
+        body = line.lstrip(chr(0x1e)).strip()  # drop U+001E record separator
+        if not body:
+            continue
         resp = s.put(
             url,
             data=body.encode("utf-8"),
             headers={"Content-Type": "application/json"},
-            timeout=300,
+            timeout=120,
         )
         if not resp.ok:
             raise MaprouletteError(
-                f"addTasks failed at {start}-{start + len(batch)} "
+                f"addTasks failed on task {i}/{total} "
                 f"({resp.status_code}): {resp.text}"
             )
-        print(f"  uploaded {min(start + len(batch), total)}/{total} tasks")
-        if start + batch_size < total:
-            time.sleep(delay_s)
+        ok += 1
+        if i % 50 == 0 or i == total:
+            print(f"  uploaded {i}/{total} tasks")
+        time.sleep(delay_s)
+    print(f"  done: {ok}/{total} tasks created")

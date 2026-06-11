@@ -8,6 +8,7 @@ from . import coverage, osm, tasks
 from .config import Config, load
 
 _TASKS_FILE = "tasks.geojson"
+_EXCLUDED_FILE = "excluded.geojson"
 _SUMMARY_FILE = "summary.json"
 
 
@@ -37,20 +38,33 @@ def cmd_build(args, cfg: Config) -> None:
     print(f"Indexed {sum(len(v) for v in index.values())} city points on "
           f"{len(index)} streets.")
 
+    # uncovered/unknown lines give a mapper nothing to verify against (no City
+    # points found, or the range was unreadable) -- keep them out of the
+    # challenge and park them in a side file for manual review.
     cats = Counter()
     lines: list[str] = []
+    excluded: list[str] = []
     for way in ways:
         cov = coverage.coverage_for_way(way, index, cfg.match_radius_m)
         cats[cov["category"]] += 1
-        lines.append(tasks.to_line(tasks.build_feature_collection(way, cov)))
+        task_line = tasks.to_line(tasks.build_feature_collection(way, cov))
+        if cov["category"] in ("uncovered", "unknown"):
+            excluded.append(task_line)
+        else:
+            lines.append(task_line)
 
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     out = cfg.data_dir / _TASKS_FILE
     out.write_text("\n".join(lines), encoding="utf-8")
+    (cfg.data_dir / _EXCLUDED_FILE).write_text(
+        "\n".join(excluded), encoding="utf-8"
+    )
 
     summary = {
         "source_snapshot": snap,
         "total_ways": len(ways),
+        "task_count": len(lines),
+        "excluded_count": len(excluded),
         "by_category": dict(cats),
         "match_radius_m": cfg.match_radius_m,
     }
@@ -58,6 +72,8 @@ def cmd_build(args, cfg: Config) -> None:
         json.dumps(summary, indent=2), encoding="utf-8"
     )
     print(f"\nWrote {len(lines)} tasks to {out}")
+    print(f"Excluded {len(excluded)} uncovered/unknown ways -> "
+          f"{cfg.data_dir / _EXCLUDED_FILE}")
     _print_summary(summary)
 
 
@@ -82,6 +98,7 @@ def cmd_create(args, cfg: Config) -> None:
     from . import maproulette
 
     project_id = args.project_id or cfg.mr_project_id
+    challenge_name = args.name or cfg.mr_challenge_name
     if not project_id:
         raise SystemExit(
             "No project id. Set maproulette.project_id in config.toml or pass "
@@ -101,7 +118,7 @@ def cmd_create(args, cfg: Config) -> None:
 
     instruction = Path("instructions/interpolation.md").read_text(encoding="utf-8")
 
-    print(f"Plan: create challenge '{cfg.mr_challenge_name}' under project "
+    print(f"Plan: create challenge '{challenge_name}' under project "
           f"{project_id} with {len(task_lines)} tasks.")
 
     if args.dry_run:
@@ -119,12 +136,10 @@ def cmd_create(args, cfg: Config) -> None:
     print(f"  project OK: {name}")
 
     challenge_id = maproulette.create_challenge(
-        cfg.mr_api_base, project_id, cfg.mr_challenge_name, instruction
+        cfg.mr_api_base, project_id, challenge_name, instruction
     )
     print(f"Created challenge {challenge_id}. Uploading tasks...")
-    maproulette.add_tasks(
-        cfg.mr_api_base, challenge_id, task_lines, cfg.mr_upload_batch_size
-    )
+    maproulette.add_tasks(cfg.mr_api_base, challenge_id, task_lines)
     print(
         f"Done. View: https://maproulette.org/admin/project/{project_id}"
         f"/challenge/{challenge_id}"
@@ -149,6 +164,7 @@ def main(argv=None) -> None:
 
     c = sub.add_parser("create", help="create the MapRoulette challenge + upload")
     c.add_argument("--project-id", type=int, help="override config project id")
+    c.add_argument("--name", help="override config challenge name")
     c.add_argument("--limit", type=int, help="upload only the first N tasks")
     c.add_argument("--dry-run", action="store_true", help="validate, don't create")
     c.set_defaults(func=cmd_create)

@@ -1,20 +1,24 @@
-This task retires one OpenStreetMap `addr:interpolation` line on **{{street}}** — range **{{range}}** (source `{{source}}`).
+This task retires one OpenStreetMap `addr:interpolation` line on **{{street}}** — range **{{range}}** (source `{{source}}`). It became redundant after the City of Toronto per-address import.
 
-Toronto Open Data now has real address points for this block, so the interpolation line should be replaced by those points and removed. Coverage from the City repository: **{{coverage}}**.
+**City data house numbers:**
+{{housenumbers}}
 
-**OSM line:** {{osm_way}}
+### 1. Align buildings / address points
+Align the OSM building footprints and address nodes to the Bing imagery layer.
 
-### 1. Verify the addresses
-The City has these points for the range (a real point already imported into OSM should sit at each listed position):
+### 2. Verify the addresses
+Verify that every house number above is present — as an individual node, or as an address on a building when that building has only the one address.
 
-{{addresses_block}}
+- Split comma/semicolon-separated addresses into individual nodes.
+- Extract the address off a building into its own node if the building already carries another address node.
 
-For any number marked `NO CITY POINT`, do **not** delete the line — the interpolation is still asserting a housenumber the City data does not cover. Skip the task (or add the point yourself if you can verify it) instead.
-
-### 2. Align buildings & address points
-For each address above, confirm the OSM building footprint / address node sits at the City position shown, and snap or nudge it there against imagery if needed. The interpolation endpoints are approximate StatCan geometry; the City points are the authoritative positions.
+Use the [Toronto Address Layer](https://skfd.github.io/toronto-addresses-layer/) for reference if any address looks misaligned or missing.
 
 ### 3. Remove the interpolation line
-Once every number in the range is present as a real point/building, delete the `addr:interpolation` way {{osm_way}}. Delete an endpoint node too **only** if it carries nothing but `addr:housenumber`/`addr:street` (now redundant); keep any endpoint that is part of a building or has other tags.
+Once every number above is present as a real point/building, delete the `addr:interpolation` way. Select the endpoint **nodes** and delete them — the editor then selects the rest of the way; if you delete the way directly, the endpoint nodes are left behind.
 
-Mark **Fixed** when done, **Already Fixed** if someone beat you to it, or **Not an Issue** / **Skip** if the line should stay (e.g. uncovered numbers).
+**IMPORTANT:** double-check that you deleted the beginning and ending nodes, not only the way. Keep an endpoint node if it is part of a building or carries other tags.
+
+Mark **Fixed** when done, **Already Fixed** if someone beat you to it, or **Not an Issue** / **Skip** if you judged that the line should stay.
+
+Report any problems or suggestions to the [Interpolation Elimination Mapping Party forum post](https://community.openstreetmap.org/).

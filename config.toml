@@ -28,7 +28,7 @@ match_radius_m = 150
 [maproulette]
 api_base = "https://maproulette.org/api/v2"
 # REQUIRED before `create`: the MapRoulette project the challenge lands in.
-project_id = 0
+project_id = 63965
 challenge_name = "Toronto address interpolation cleanup"
 # Tasks per addTasks request when uploading.
 upload_batch_size = 1000
