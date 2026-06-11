@@ -103,6 +103,11 @@ $env:MAPROULETTE_API_KEY = "<your key>"
   and in the `build` stats; it is **not** shown to mappers. An interpolation
   range enumerates estimates, not real addresses, so "missing" intermediate
   numbers are expected and not warned about.
+- **Staleness:** the fetch cache is timestamped and `create` warns when it is
+  more than a week old (refetch + rebuild before uploading). Every created
+  challenge is recorded in the committed `manifest.json` (challenge id,
+  neighbourhood, way ids, fetch time) so a future `refresh` can diff live
+  tasks against current OSM and close tasks whose ways are already gone.
 - `create` is the only outward-facing step. It validates the project before
   creating anything, then PUTs **one FeatureCollection per task** (MapRoulette's
   `addTasks` parses a single JSON value per request — the `U+001E` prefix is

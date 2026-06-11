@@ -2,10 +2,11 @@
 import argparse
 import json
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import coverage, hoods, osm, tasks
-from .config import Config, load
+from .config import ROOT, Config, load
 
 _TASKS_FILE = "tasks.geojson"
 _EXCLUDED_FILE = "excluded.geojson"
@@ -79,6 +80,7 @@ def cmd_build(args, cfg: Config) -> None:
 
     summary = {
         "source_snapshot": snap,
+        "fetched_at": osm.fetched_at(cfg),
         "total_ways": len(ways),
         "task_count": len(lines),
         "excluded_count": len(excluded),
@@ -122,6 +124,52 @@ def _print_summary(summary: dict) -> None:
             print(f"  {n:>5}  {hood}")
 
 
+def _summary_fetched_at(cfg: Config) -> str | None:
+    path = cfg.data_dir / _SUMMARY_FILE
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8")).get("fetched_at")
+
+
+def _warn_if_stale(fetched: str | None) -> None:
+    if not fetched:
+        print("Note: fetch timestamp unknown (old cache format).")
+        return
+    age = datetime.now(timezone.utc) - datetime.fromisoformat(fetched)
+    print(f"OSM data fetched {age.days} day(s) ago ({fetched}).")
+    if age.days > 7:
+        print("WARNING: the fetch is over a week old. OSM has moved since; "
+              "consider `fetch --force` + `build` before uploading.")
+
+
+def _record_in_manifest(
+    project_id: int, challenge_id: int, name: str, hood: str | None,
+    lines: list[str], fetched: str | None,
+) -> None:
+    """Append a created challenge (and the way ids it covers) to the committed
+    manifest, so a future `refresh` can diff live tasks against current OSM."""
+    path = ROOT / "manifest.json"
+    manifest = (
+        json.loads(path.read_text(encoding="utf-8"))
+        if path.exists()
+        else {"project_id": project_id, "challenges": {}}
+    )
+    way_ids = [
+        int(json.loads(ln.lstrip(chr(0x1e)))["features"][0]["properties"]
+            ["osm_way"].split("/")[1])
+        for ln in lines
+    ]
+    manifest["challenges"][str(challenge_id)] = {
+        "name": name,
+        "neighbourhood": hood,
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "fetched_at": fetched,
+        "task_count": len(way_ids),
+        "way_ids": way_ids,
+    }
+    path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+
 def cmd_create(args, cfg: Config) -> None:
     from . import maproulette
 
@@ -145,6 +193,9 @@ def cmd_create(args, cfg: Config) -> None:
         task_lines = task_lines[: args.limit]
 
     instruction = Path("instructions/interpolation.md").read_text(encoding="utf-8")
+
+    fetched = _summary_fetched_at(cfg)
+    _warn_if_stale(fetched)
 
     if args.by_neighbourhood:
         # One challenge per neighbourhood, named "<base> - <neighbourhood>".
@@ -192,6 +243,9 @@ def cmd_create(args, cfg: Config) -> None:
         print(f"Created challenge {challenge_id} '{full_name}'. Uploading "
               f"{len(lines)} tasks...")
         maproulette.add_tasks(cfg.mr_api_base, challenge_id, lines)
+        _record_in_manifest(
+            project_id, challenge_id, full_name, hood, lines, fetched
+        )
     print(
         f"Done. View: https://maproulette.org/admin/project/{project_id}"
     )

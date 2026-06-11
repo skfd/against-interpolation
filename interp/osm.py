@@ -9,6 +9,7 @@ data/interpolation_ways.json.
 import json
 import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -92,7 +93,7 @@ def fetch(cfg: Config, force: bool = False) -> list[dict]:
     """Fetch + cache all interpolation ways in the configured bbox."""
     out_path = cfg.data_dir / "interpolation_ways.json"
     if out_path.exists() and not force:
-        return json.loads(out_path.read_text(encoding="utf-8"))
+        return load_cached(cfg)
 
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
@@ -125,15 +126,32 @@ def fetch(cfg: Config, force: bool = False) -> list[dict]:
             time.sleep(cfg.request_delay_s)
 
     ways = list(by_id.values())
-    out_path.write_text(json.dumps(ways), encoding="utf-8")
+    payload = {
+        "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "bbox": list(cfg.toronto_bbox),
+        "ways": ways,
+    }
+    out_path.write_text(json.dumps(payload), encoding="utf-8")
     print(f"Wrote {len(ways)} interpolation ways to {out_path}")
     return ways
 
 
-def load_cached(cfg: Config) -> list[dict]:
+def _read_cache(cfg: Config) -> dict:
     path = cfg.data_dir / "interpolation_ways.json"
     if not path.exists():
         raise FileNotFoundError(
             f"{path} not found. Run `python run.py fetch` first."
         )
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(data, list):  # pre-timestamp cache format
+        return {"fetched_at": None, "bbox": None, "ways": data}
+    return data
+
+
+def load_cached(cfg: Config) -> list[dict]:
+    return _read_cache(cfg)["ways"]
+
+
+def fetched_at(cfg: Config) -> str | None:
+    """ISO timestamp of the cached fetch, or None for a pre-timestamp cache."""
+    return _read_cache(cfg)["fetched_at"]
