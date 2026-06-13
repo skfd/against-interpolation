@@ -9,14 +9,13 @@ StatCan/CanVec interpolation lines that span the same blocks can be removed.
 One MapRoulette task is created **per interpolation line**. Each task shows the
 house numbers the City actually has for the block (the ground truth — the
 interpolation's in-between numbers are only estimates and many never existed)
-and walks a mapper through three steps:
+and walks a mapper through two steps:
 
-1. **Align buildings / address points** to the Bing imagery layer.
-2. **Verify the addresses** — every City house number present as an individual
+1. **Verify the addresses** — every City house number present as an individual
    node, or as an address on a building when that building has only the one
    address. The [Toronto Address Layer](https://skfd.github.io/toronto-addresses-layer/)
    helps spot misaligned or missing ones.
-3. **Remove the interpolation line** — delete the endpoint nodes (the editor
+2. **Remove the interpolation line** — delete the endpoint nodes (the editor
    takes the way with them); keep an endpoint that is part of a building or
    carries other tags.
 

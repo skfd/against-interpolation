@@ -3,10 +3,7 @@ This task retires one OpenStreetMap `addr:interpolation` line on **{{street}}** 
 **City data house numbers:**
 {{housenumbers}}
 
-### 1. Align buildings / address points
-Align the OSM building footprints and address nodes to the Bing imagery layer.
-
-### 2. Verify the addresses
+### 1. Verify the addresses
 Verify that every house number above is present — as an individual node, or as an address on a building when that building has only the one address.
 
 - Split comma/semicolon-separated addresses into individual nodes.
@@ -14,7 +11,7 @@ Verify that every house number above is present — as an individual node, or as
 
 Use the [Toronto Address Layer](https://skfd.github.io/toronto-addresses-layer/) for reference if any address looks misaligned or missing.
 
-### 3. Remove the interpolation line
+### 2. Remove the interpolation line
 Once every number above is present as a real point/building, delete the `addr:interpolation` way. Select the endpoint **nodes** and delete them — the editor then selects the rest of the way; if you delete the way directly, the endpoint nodes are left behind.
 
 **IMPORTANT:** double-check that you deleted the beginning and ending nodes, not only the way. Keep an endpoint node if it is part of a building or carries other tags.
