@@ -30,6 +30,27 @@ def _session(api_key: str) -> requests.Session:
     return s
 
 
+def _request_with_retry(method, *args, retries: int = 4, **kwargs):
+    """Issue a request, retrying transient network timeouts with backoff.
+
+    MapRoulette occasionally takes longer than the read timeout on a single
+    addTasks PUT; a lone timeout shouldn't abort an upload of dozens of
+    challenges. Only the connection-level timeouts/errors are retried — an HTTP
+    error response is returned to the caller to handle.
+    """
+    transient = (requests.exceptions.Timeout, requests.exceptions.ConnectionError)
+    for attempt in range(1, retries + 1):
+        try:
+            return method(*args, **kwargs)
+        except transient as e:
+            if attempt == retries:
+                raise
+            wait = 2 ** attempt
+            print(f"  transient network error ({type(e).__name__}); "
+                  f"retry {attempt}/{retries - 1} in {wait}s...")
+            time.sleep(wait)
+
+
 def validate_project(api_base: str, project_id: int) -> str:
     """Return the project name, or raise if it isn't accessible."""
     s = _session(_api_key())
@@ -60,7 +81,9 @@ def create_challenge(
         "requiresLocal": True,  # requires local / specialized knowledge
         "parent": project_id,
     }
-    resp = s.post(f"{api_base}/challenge", json=payload, timeout=120)
+    resp = _request_with_retry(
+        s.post, f"{api_base}/challenge", json=payload, timeout=120
+    )
     if not resp.ok:
         raise MaprouletteError(
             f"Failed to create challenge ({resp.status_code}): {resp.text}"
@@ -89,7 +112,8 @@ def add_tasks(
         body = line.lstrip(chr(0x1e)).strip()  # drop U+001E record separator
         if not body:
             continue
-        resp = s.put(
+        resp = _request_with_retry(
+            s.put,
             url,
             data=body.encode("utf-8"),
             headers={"Content-Type": "application/json"},
