@@ -102,13 +102,23 @@ def fetch(cfg: Config, force: bool = False) -> list[dict]:
     by_id: dict[int, dict] = {}
     tiles = list(_tiles(cfg.toronto_bbox, cfg.tile_deg))
     for i, tile in enumerate(tiles, 1):
-        resp = session.post(
-            cfg.overpass_url,
-            data={"data": _query(tile)},
-            headers=headers,
-            timeout=200,
-        )
-        resp.raise_for_status()
+        # Overpass throttles with 429 (and sheds load with 504); one busy
+        # moment shouldn't kill a 66-tile sweep. Back off and retry the tile.
+        for attempt in range(5):
+            resp = session.post(
+                cfg.overpass_url,
+                data={"data": _query(tile)},
+                headers=headers,
+                timeout=200,
+            )
+            if resp.status_code in (429, 504) and attempt < 4:
+                wait = int(resp.headers.get("Retry-After") or 0) or 30 * (attempt + 1)
+                print(f"  tile {i}/{len(tiles)}: Overpass busy "
+                      f"({resp.status_code}); retrying in {wait}s...")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            break
         elements = resp.json().get("elements", [])
         nodes = {
             el["id"]: el for el in elements if el.get("type") == "node"
