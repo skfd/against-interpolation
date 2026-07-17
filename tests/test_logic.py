@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from interp import geo  # noqa: E402
 from interp import hoods  # noqa: E402
 from interp.coverage import _parity_sequence, coverage_for_way  # noqa: E402
+from interp import refresh  # noqa: E402
 from interp import tasks  # noqa: E402
 
 
@@ -114,3 +115,61 @@ def test_locate_point_in_polygon():
 
 def test_midpoint():
     assert hoods.midpoint([[43.0, -79.0], [44.0, -80.0]]) == (43.5, -79.5)
+
+
+def _task_line(way_id, hood):
+    fc = tasks.build_feature_collection(
+        {"way_id": way_id, "lo": 1, "hi": 3, "parity": "odd", "street": "Main St",
+         "geometry": [(43.65, -79.40), (43.65, -79.399)], "source": "test"},
+        {"category": "full", "items": [], "present_count": 0},
+        neighbourhood=hood,
+    )
+    return tasks.to_line(fc)
+
+
+def test_refresh_lines_by_hood():
+    lines = [_task_line(1, "Alpha"), _task_line(2, "Alpha"), _task_line(3, "Beta"),
+             _task_line(4, None)]
+    grouped = refresh.lines_by_hood(lines)
+    assert set(grouped) == {"Alpha", "Beta", "(unassigned)"}
+    assert set(grouped["Alpha"]) == {1, 2}
+    assert grouped["Beta"][3] == lines[2]
+
+
+def test_refresh_plan():
+    manifest = {"challenges": {
+        "100": {"name": "X - Alpha", "neighbourhood": "Alpha", "way_ids": [1, 2, 3]},
+        "200": {"name": "X - Beta", "neighbourhood": "Beta", "way_ids": [4]},
+    }}
+    # way 2 deleted from OSM; way 5 is new in Alpha; way 6 builds under the
+    # orphan hood Gamma. Way 3 is still in OSM but absent from the build
+    # (coverage shifted) -- must NOT be reported gone.
+    live = {1, 3, 4, 5, 6}
+    hood_lines = {
+        "Alpha": {1: "l1", 5: "l5"},
+        "Beta": {4: "l4"},
+        "Gamma": {6: "l6"},
+    }
+    entries, orphans = refresh.plan(manifest, live, hood_lines)
+    assert orphans == ["Gamma"]
+    alpha, beta = entries
+    assert alpha["challenge_id"] == 100
+    assert alpha["gone"] == [2]
+    assert alpha["new"] == [5]
+    assert beta["gone"] == [] and beta["new"] == []
+
+
+def test_refresh_plan_way_moved_hoods_not_reuploaded():
+    # Way 1 was uploaded under Alpha; the build now assigns it to Beta.
+    # It must not become a "new" task in Beta (it is claimed by Alpha).
+    manifest = {"challenges": {
+        "100": {"name": "X - Alpha", "neighbourhood": "Alpha", "way_ids": [1]},
+        "200": {"name": "X - Beta", "neighbourhood": "Beta", "way_ids": [2]},
+    }}
+    entries, orphans = refresh.plan(
+        manifest, {1, 2}, {"Beta": {1: "l1", 2: "l2"}}
+    )
+    alpha, beta = entries
+    assert alpha["gone"] == [] and alpha["new"] == []
+    assert beta["gone"] == [] and beta["new"] == []
+    assert orphans == []

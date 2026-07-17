@@ -15,6 +15,16 @@ class MaprouletteError(RuntimeError):
     pass
 
 
+# MapRoulette task status codes (fixed enum, api /task/{id}/{status}).
+STATUS_CREATED = 0
+STATUS_SKIPPED = 3
+STATUS_ALREADY_FIXED = 5
+# The only statuses a refresh may overwrite. Everything else (fixed,
+# falsePositive, deleted, alreadyFixed, tooHard) is a mapper's judgment or a
+# prior refresh — never touch those.
+REFRESHABLE_STATUSES = {STATUS_CREATED, STATUS_SKIPPED}
+
+
 def _api_key() -> str:
     key = os.environ.get("MAPROULETTE_API_KEY")
     if not key:
@@ -89,6 +99,60 @@ def create_challenge(
             f"Failed to create challenge ({resp.status_code}): {resp.text}"
         )
     return resp.json()["id"]
+
+
+def get_tasks(api_base: str, challenge_id: int) -> list[dict]:
+    """Return {id, name, status} for every task in the challenge.
+
+    Tasks created by our uploader are named after the feature's `@id`
+    ("way/<osm id>"), so the name maps a task back to its OSM way.
+    """
+    s = _session(_api_key())
+    out: list[dict] = []
+    page, limit = 0, 1000
+    while True:
+        resp = _request_with_retry(
+            s.get,
+            f"{api_base}/challenge/{challenge_id}/tasks",
+            params={"limit": limit, "page": page},
+            timeout=120,
+        )
+        if not resp.ok:
+            raise MaprouletteError(
+                f"Failed to list tasks for challenge {challenge_id} "
+                f"({resp.status_code}): {resp.text}"
+            )
+        batch = resp.json()
+        out.extend(
+            {"id": t["id"], "name": t["name"], "status": t["status"]}
+            for t in batch
+        )
+        if len(batch) < limit:
+            return out
+        page += 1
+
+
+def set_task_statuses(
+    api_base: str,
+    task_ids: list[int],
+    status: int,
+    delay_s: float = 0.1,
+) -> None:
+    """Set the same status on each task (PUT /task/{id}/{status})."""
+    s = _session(_api_key())
+    total = len(task_ids)
+    for i, task_id in enumerate(task_ids, 1):
+        resp = _request_with_retry(
+            s.put, f"{api_base}/task/{task_id}/{status}", timeout=60
+        )
+        if not resp.ok:
+            raise MaprouletteError(
+                f"Failed to set status {status} on task {task_id} "
+                f"({resp.status_code}): {resp.text}"
+            )
+        if i % 50 == 0 or i == total:
+            print(f"  marked {i}/{total} tasks")
+        time.sleep(delay_s)
 
 
 def add_tasks(

@@ -74,6 +74,13 @@ python run.py create --limit 20      # upload a small first batch
 python run.py create                 # full upload
 python run.py create --name "..."    # override the challenge name (test runs)
 python run.py create --by-neighbourhood   # one challenge per neighbourhood
+
+# 4. Later: sync the live challenges with a fresh fetch+build. Closes tasks
+#    whose ways are gone from OSM (marked alreadyFixed) and uploads tasks for
+#    newly eligible ways. Mapper-set statuses are never overwritten.
+python run.py fetch --force && python run.py build
+python run.py refresh --dry-run      # preview the per-challenge diff
+python run.py refresh                # apply it
 ```
 
 Set the API key (PowerShell):
@@ -102,11 +109,16 @@ $env:MAPROULETTE_API_KEY = "<your key>"
   and in the `build` stats; it is **not** shown to mappers. An interpolation
   range enumerates estimates, not real addresses, so "missing" intermediate
   numbers are expected and not warned about.
-- **Staleness:** the fetch cache is timestamped and `create` warns when it is
-  more than a week old (refetch + rebuild before uploading). Every created
-  challenge is recorded in the committed `manifest.json` (challenge id,
-  neighbourhood, way ids, fetch time) so a future `refresh` can diff live
-  tasks against current OSM and close tasks whose ways are already gone.
+- **Staleness:** the fetch cache is timestamped and `create`/`refresh` warn
+  when it is more than a week old (refetch + rebuild before uploading). Every
+  created challenge is recorded in the committed `manifest.json` (challenge id,
+  neighbourhood, way ids, fetch time), which is what `refresh` diffs against.
+- **Refresh rules:** a task is closed (`alreadyFixed`) only when its way is
+  gone from the raw OSM fetch — not merely absent from `tasks.geojson`, since
+  a way can drop out of the build while still existing in OSM. Only tasks
+  still in `created`/`skipped` status are ever touched; fixed, falsePositive
+  and other mapper-set statuses always win. New tasks are `addTasks`-ed to the
+  existing neighbourhood challenge; existing tasks are never re-uploaded.
 - `create` is the only outward-facing step. It validates the project before
   creating anything, then PUTs **one FeatureCollection per task** (MapRoulette's
   `addTasks` parses a single JSON value per request — the `U+001E` prefix is

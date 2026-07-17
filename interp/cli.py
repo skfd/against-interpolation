@@ -147,7 +147,7 @@ def _record_in_manifest(
     lines: list[str], fetched: str | None,
 ) -> None:
     """Append a created challenge (and the way ids it covers) to the committed
-    manifest, so a future `refresh` can diff live tasks against current OSM."""
+    manifest, so `refresh` can diff live tasks against current OSM."""
     path = ROOT / "manifest.json"
     manifest = (
         json.loads(path.read_text(encoding="utf-8"))
@@ -251,6 +251,114 @@ def cmd_create(args, cfg: Config) -> None:
     )
 
 
+def cmd_refresh(args, cfg: Config) -> None:
+    from . import maproulette, refresh
+
+    manifest_path = ROOT / "manifest.json"
+    if not manifest_path.exists():
+        raise SystemExit("No manifest.json — nothing to refresh (run `create` first).")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    ways = osm.load_cached(cfg)
+    live_ids = {w["way_id"] for w in ways}
+    cache_fetched = osm.fetched_at(cfg)
+    built_from = _summary_fetched_at(cfg)
+    if cache_fetched and built_from and cache_fetched != built_from:
+        raise SystemExit(
+            f"tasks.geojson was built from a different fetch ({built_from}) "
+            f"than the cache ({cache_fetched}). Run `build` first."
+        )
+    _warn_if_stale(cache_fetched)
+
+    tasks_path = cfg.data_dir / _TASKS_FILE
+    if not tasks_path.exists():
+        raise SystemExit("No tasks.geojson — run `build` first.")
+    task_lines = [
+        ln for ln in tasks_path.read_text(encoding="utf-8").split("\n") if ln.strip()
+    ]
+    hood_lines = refresh.lines_by_hood(task_lines)
+
+    entries, orphan_hoods = refresh.plan(manifest, live_ids, hood_lines)
+    if args.hoods:
+        wanted = {h.strip().lower() for h in args.hoods.split(",")}
+        missing = wanted - {(e["neighbourhood"] or "").lower() for e in entries}
+        if missing:
+            raise SystemExit(
+                f"No challenge for requested neighbourhood(s): "
+                f"{', '.join(sorted(missing))}"
+            )
+        entries = [
+            e for e in entries if (e["neighbourhood"] or "").lower() in wanted
+        ]
+
+    todo = [e for e in entries if e["gone"] or e["new"]]
+    total_gone = sum(len(e["gone"]) for e in todo)
+    total_new = sum(len(e["new"]) for e in todo)
+    print(f"\nPlan: {len(todo)}/{len(entries)} challenges need changes "
+          f"({total_gone} ways gone from OSM, {total_new} new tasks):")
+    for e in todo:
+        print(f"  -{len(e['gone']):>4} +{len(e['new']):>4}  {e['name']}")
+    if orphan_hoods:
+        print(f"\n{len(orphan_hoods)} neighbourhood(s) in the build have no "
+              f"challenge (use `create --by-neighbourhood --hoods ...`):")
+        for hood in orphan_hoods:
+            print(f"  {len(hood_lines[hood]):>5}  {hood}")
+
+    if args.dry_run:
+        print("--dry-run: stopping before touching MapRoulette.")
+        return
+    if not todo:
+        print("Nothing to do.")
+        return
+
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    for e in todo:
+        cid = e["challenge_id"]
+        ch = manifest["challenges"][str(cid)]
+        print(f"\n{e['name']} (challenge {cid}):")
+        # Live task list (name "way/<id>" -> id/status), used both to skip
+        # tasks a mapper already closed and to make re-runs idempotent.
+        by_way: dict[int, dict] = {}
+        for t in maproulette.get_tasks(cfg.mr_api_base, cid):
+            if t["name"].startswith("way/"):
+                by_way[int(t["name"].split("/")[1])] = t
+        if e["gone"]:
+            to_mark, closed, not_found = [], 0, 0
+            for way_id in e["gone"]:
+                t = by_way.get(way_id)
+                if t is None:
+                    not_found += 1
+                elif t["status"] in maproulette.REFRESHABLE_STATUSES:
+                    to_mark.append(t["id"])
+                else:
+                    closed += 1
+            print(f"  {len(e['gone'])} ways gone from OSM: marking "
+                  f"{len(to_mark)} alreadyFixed ({closed} already closed by "
+                  f"mappers, {not_found} not found in MR)")
+            maproulette.set_task_statuses(
+                cfg.mr_api_base, to_mark, maproulette.STATUS_ALREADY_FIXED
+            )
+        if e["new"]:
+            # Skip ways MR already has a task for (interrupted earlier run).
+            to_upload = [w for w in e["new"] if w not in by_way]
+            if len(to_upload) < len(e["new"]):
+                print(f"  {len(e['new']) - len(to_upload)} new task(s) already "
+                      f"in MR (resumed run); skipping those")
+            if to_upload:
+                lines = [hood_lines[e["neighbourhood"]][w] for w in to_upload]
+                print(f"  uploading {len(lines)} new tasks...")
+                maproulette.add_tasks(cfg.mr_api_base, cid, lines)
+            # Record all of e["new"]: after this block they all exist in MR.
+            ch["way_ids"].extend(e["new"])
+            ch["task_count"] = len(ch["way_ids"])
+        ch["refreshed_at"] = now
+        # Write after every challenge so an interrupted run can resume.
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2), encoding="utf-8"
+        )
+    print("\nDone.")
+
+
 def main(argv=None) -> None:
     cfg = load()
     p = argparse.ArgumentParser(prog="against-interpolation")
@@ -277,6 +385,16 @@ def main(argv=None) -> None:
                    help="comma-separated neighbourhood filter (with --by-neighbourhood)")
     c.add_argument("--dry-run", action="store_true", help="validate, don't create")
     c.set_defaults(func=cmd_create)
+
+    r = sub.add_parser(
+        "refresh",
+        help="sync live challenges with a fresh fetch+build: close tasks for "
+             "ways gone from OSM, upload tasks for new ways",
+    )
+    r.add_argument("--hoods", help="comma-separated neighbourhood filter")
+    r.add_argument("--dry-run", action="store_true",
+                   help="print the diff, change nothing")
+    r.set_defaults(func=cmd_refresh)
 
     args = p.parse_args(argv)
     args.func(args, cfg)
