@@ -5,7 +5,9 @@
 # imported for read-only access to the Toronto address DB (source_db) and the
 # street-name normalizer (conflate.normalize_street). The source SQLite path
 # itself is read from that project's own config.toml — we don't duplicate it.
-root = "C:/Users/kk/Code/toronto-2-address-import"
+# A relative path is resolved against this project's root, so the default works
+# when both repos are cloned side by side.
+root = "../toronto-2-address-import"
 
 [osm]
 # City-of-Toronto-ish clip. Same rectangle the import uses.

@@ -30,7 +30,7 @@ def load() -> Config:
     assert len(bbox) == 4, "osm.toronto_bbox must have 4 numbers"
 
     return Config(
-        t2_root=str(cfg["t2"]["root"]),
+        t2_root=str((ROOT / cfg["t2"]["root"]).resolve()),
         toronto_bbox=bbox,  # type: ignore[arg-type]
         overpass_url=str(cfg["osm"]["overpass_url"]),
         tile_deg=float(cfg["osm"]["tile_deg"]),

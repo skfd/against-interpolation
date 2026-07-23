@@ -2,9 +2,10 @@
 
 Generates MapRoulette tasks to retire redundant `addr:interpolation` lines in
 Toronto. This is the cleanup phase that the sibling
-[`toronto-2-address-import`](../toronto-2-address-import) project deferred as
-out of scope: now that the City's per-address points are in OSM, the old
-StatCan/CanVec interpolation lines that span the same blocks can be removed.
+[`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import)
+project deferred as out of scope: now that the City's per-address points are in
+OSM, the old StatCan/CanVec interpolation lines that span the same blocks can be
+removed.
 
 One MapRoulette task is created **per interpolation line**. Each task shows the
 house numbers the City actually has for the block (the ground truth — the
@@ -31,11 +32,14 @@ list gives a mapper nothing to verify against.
 
 ## How it relates to the sibling projects
 
-- **Data** comes from `toronto-2-address-import`. We import its `t2` package
-  read-only for the Toronto address DB (`source_db`) and the street-name
-  normalizer (`conflate.normalize_street`). Set its location in `config.toml`
-  under `[t2] root`. That project's own `config.toml` supplies the SQLite path,
-  so we don't duplicate it.
+- **Data** comes from
+  [`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import),
+  which `build` requires. We import its `t2` package read-only for the Toronto
+  address DB (`source_db`) and the street-name normalizer
+  (`conflate.normalize_street`). Set its location in `config.toml` under
+  `[t2] root` — the default `../toronto-2-address-import` works when both repos
+  are cloned side by side. That project's own `config.toml` supplies the SQLite
+  path, so we don't duplicate it.
 - **MapRoulette task shape** mirrors `bikeshare-toronto-maproulette`:
   record-separator-delimited GeoJSON (one `FeatureCollection` per line, each
   prefixed with a `U+001E` record separator), with the challenge instruction in
@@ -44,15 +48,20 @@ list gives a mapper nothing to verify against.
 
 ## Setup
 
-```bash
+Python 3.11+.
+
+```powershell
 python -m venv .venv
 .venv\Scripts\activate
 pip install -e .            # installs `requests`
 ```
 
-Edit `config.toml`:
+Then edit `config.toml`:
 
-- `[t2] root` — path to the `toronto-2-address-import` checkout.
+- `[t2] root` — path to the
+  [`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import)
+  checkout, relative to this project or absolute. `build` reads its address DB,
+  so clone it too. Defaults to a sibling checkout.
 - `[maproulette] project_id` — the MapRoulette project the challenge lands in
   (required before `create`).
 
