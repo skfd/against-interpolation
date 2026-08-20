@@ -32,14 +32,16 @@ list gives a mapper nothing to verify against.
 
 ## How it relates to the sibling projects
 
-- **Data** comes from
-  [`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import),
-  which `build` requires. We import its `t2` package read-only for the Toronto
-  address DB (`source_db`) and the street-name normalizer
-  (`conflate.normalize_street`). Set its location in `config.toml` under
-  `[t2] root` — the default `../toronto-2-address-import` works when both repos
-  are cloned side by side. That project's own `config.toml` supplies the SQLite
-  path, so we don't duplicate it.
+- **Data** comes from the `address-importer-friend` engine (the `t2` package,
+  forked out of
+  [`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import)),
+  which `build` requires. We import `t2` read-only for the Toronto address DB
+  (`source_db`) and the street-name normalizer (`conflate.normalize_street`).
+  Set the engine's location in `config.toml` under `[t2] root` and the Toronto
+  city checkout under `[t2] city_dir` (exported as `T2_CITY_DIR` before
+  import) — the defaults work when all repos are cloned side by side. The city
+  checkout's own `config.toml` supplies the SQLite path, so we don't duplicate
+  it.
 - **MapRoulette task shape** mirrors `bikeshare-toronto-maproulette`:
   record-separator-delimited GeoJSON (one `FeatureCollection` per line, each
   prefixed with a `U+001E` record separator), with the challenge instruction in
@@ -58,10 +60,13 @@ pip install -e .            # installs `requests`
 
 Then edit `config.toml`:
 
-- `[t2] root` — path to the
+- `[t2] root` — path to the `address-importer-friend` engine checkout (the
+  `t2` package), relative to this project or absolute. Defaults to a sibling
+  checkout.
+- `[t2] city_dir` — path to the
   [`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import)
-  checkout, relative to this project or absolute. `build` reads its address DB,
-  so clone it too. Defaults to a sibling checkout.
+  city checkout. `build` reads its address DB, so clone it too. Defaults to a
+  sibling checkout.
 - `[maproulette] project_id` — the MapRoulette project the challenge lands in
   (required before `create`).
 

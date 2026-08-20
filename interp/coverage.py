@@ -30,13 +30,20 @@ def _parity_sequence(lo: int, hi: int, parity: str | None) -> list[int]:
 def build_index(snap_id: int) -> dict[str, list[dict]]:
     """{normalized_street: [{num, lat, lon, apid, full}, ...]} over all active
     single-point (hi_num IS NULL) Toronto addresses."""
+    # The engine's tracker schema is city-generic; expr() projects the logical
+    # fields (lo_num, street, ...) through Toronto's [source_fields] recipe.
+    lo = source_db.expr("lo_num", "")
+    hi = source_db.expr("hi_num", "")
     conn = source_db.connect_readonly()
     try:
         rows = conn.execute(
-            "SELECT lo_num, linear_name_full, latitude, longitude, "
-            "       address_point_id, address_full "
+            f"SELECT {lo} AS lo_num, "
+            f"       {source_db.expr('street', '')} AS linear_name_full, "
+            "       latitude, longitude, "
+            "       identity_key AS address_point_id, "
+            f"       {source_db.expr('full', '')} AS address_full "
             "FROM addresses "
-            "WHERE max_snapshot_id=? AND hi_num IS NULL AND lo_num IS NOT NULL",
+            f"WHERE max_snapshot_id=? AND {hi} IS NULL AND {lo} IS NOT NULL",
             (snap_id,),
         ).fetchall()
     finally:

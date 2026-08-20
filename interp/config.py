@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 @dataclass
 class Config:
     t2_root: str
+    t2_city_dir: str
     toronto_bbox: tuple[float, float, float, float]
     overpass_url: str
     tile_deg: float
@@ -31,6 +32,7 @@ def load() -> Config:
 
     return Config(
         t2_root=str((ROOT / cfg["t2"]["root"]).resolve()),
+        t2_city_dir=str((ROOT / cfg["t2"].get("city_dir", cfg["t2"]["root"])).resolve()),
         toronto_bbox=bbox,  # type: ignore[arg-type]
         overpass_url=str(cfg["osm"]["overpass_url"]),
         tile_deg=float(cfg["osm"]["tile_deg"]),

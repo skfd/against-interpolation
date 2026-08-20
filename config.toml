@@ -1,13 +1,15 @@
 # Configuration for the Toronto interpolation-cleanup MapRoulette tool.
 
 [t2]
-# Root of the sibling toronto-2-address-import project. Its `t2` package is
-# imported for read-only access to the Toronto address DB (source_db) and the
-# street-name normalizer (conflate.normalize_street). The source SQLite path
-# itself is read from that project's own config.toml — we don't duplicate it.
-# A relative path is resolved against this project's root, so the default works
-# when both repos are cloned side by side.
-root = "../toronto-2-address-import"
+# Root of the address-importer-friend engine. Its `t2` package is imported for
+# read-only access to the Toronto address DB (source_db) and the street-name
+# normalizer (conflate.normalize_street). Relative paths are resolved against
+# this project's root, so the defaults work when the repos are cloned side by
+# side.
+root = "../address-importer-friend"
+# The Toronto city checkout the engine operates on (T2_CITY_DIR): its
+# config.toml supplies the source SQLite path — we don't duplicate it.
+city_dir = "../toronto-2-address-import"
 
 [osm]
 # City-of-Toronto-ish clip. Same rectangle the import uses.
