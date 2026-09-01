@@ -4,7 +4,8 @@ REM refetch OSM ways, rebuild tasks, then diff-sync the live challenges.
 REM Run by the kk-AgainstInterpolation scheduled task (Wednesdays 12:00).
 REM
 REM Needs MAPROULETTE_API_KEY (user env var) and the sibling
-REM toronto-2-address-import checkout for `build`.
+REM toronto-2-address-import checkout for `build`, plus a stored GitHub
+REM credential that Credential Manager can hand over without prompting.
 
 setlocal
 cd /d "%~dp0" || exit /b 1
@@ -24,4 +25,11 @@ git diff --cached --quiet -- manifest.json && (
 ) || (
     git commit -m "weekly refresh: sync manifest" || (echo [%DATE% %TIME%] git commit FAILED & exit /b 1)
 )
+
+REM Push so the public repo reflects the live challenge state. The task runs
+REM unattended at midday, so never let a credential prompt hang it -- fail
+REM loudly instead and let next week's run send both commits.
+set GIT_TERMINAL_PROMPT=0
+git -c credential.interactive=false push origin main || (echo [%DATE% %TIME%] git push FAILED & exit /b 1)
+
 echo [%DATE% %TIME%] weekly refresh done
