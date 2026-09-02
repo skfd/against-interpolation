@@ -452,7 +452,7 @@
         400231903,
         400231904
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55358": {
       "name": "Toronto address interpolation cleanup - Long Branch",
@@ -725,7 +725,7 @@
         400231897,
         400231908
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55359": {
       "name": "Toronto address interpolation cleanup - Mimico-Queensway",
@@ -1058,7 +1058,7 @@
         401039143,
         401039152
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55360": {
       "name": "Toronto address interpolation cleanup - New Toronto",
@@ -1705,7 +1705,7 @@
         400867678,
         401243048
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55382": {
       "name": "Toronto address interpolation cleanup - Agincourt South-Malvern West",
@@ -2337,7 +2337,7 @@
         66228035,
         66228261
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55384": {
       "name": "Toronto address interpolation cleanup - Avondale",
@@ -7104,7 +7104,7 @@
         66275578,
         66275638
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55400": {
       "name": "Toronto address interpolation cleanup - Broadview North",
@@ -7876,7 +7876,7 @@
         67804938,
         67804944
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55404": {
       "name": "Toronto address interpolation cleanup - Casa Loma",
@@ -9464,7 +9464,7 @@
       "neighbourhood": "Corso Italia-Davenport",
       "created_at": "2026-06-14T01:52:39+00:00",
       "fetched_at": "2026-06-14T00:58:12+00:00",
-      "task_count": 272,
+      "task_count": 277,
       "way_ids": [
         67803827,
         67803836,
@@ -9737,9 +9737,14 @@
         67804908,
         67804916,
         67804941,
-        67804945
+        67804945,
+        67803927,
+        67804032,
+        67804147,
+        67804905,
+        67804921
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55411": {
       "name": "Toronto address interpolation cleanup - Danforth",
@@ -11997,7 +12002,7 @@
         81140331,
         401074952
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55419": {
       "name": "Toronto address interpolation cleanup - East End-Danforth",
@@ -12480,7 +12485,7 @@
         66416046,
         66416083
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55420": {
       "name": "Toronto address interpolation cleanup - East L'Amoreaux",
@@ -12782,7 +12787,7 @@
         400867389,
         400867428
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55421": {
       "name": "Toronto address interpolation cleanup - East Willowdale",
@@ -13589,7 +13594,7 @@
         401039256,
         401039263
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55423": {
       "name": "Toronto address interpolation cleanup - Eglinton East",
@@ -14767,7 +14772,7 @@
         66417485,
         66417545
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55428": {
       "name": "Toronto address interpolation cleanup - Etobicoke City Centre",
@@ -15007,7 +15012,7 @@
         696170421,
         696170422
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55429": {
       "name": "Toronto address interpolation cleanup - Etobicoke West Mall",
@@ -17621,7 +17626,7 @@
         401039154,
         401074609
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55442": {
       "name": "Toronto address interpolation cleanup - High Park-Swansea",
@@ -17882,7 +17887,7 @@
         401039142,
         401039240
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55443": {
       "name": "Toronto address interpolation cleanup - Highland Creek",
@@ -19937,14 +19942,14 @@
         72377215,
         72377221
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55452": {
       "name": "Toronto address interpolation cleanup - Junction Area",
       "neighbourhood": "Junction Area",
       "created_at": "2026-06-14T02:37:58+00:00",
       "fetched_at": "2026-06-14T00:58:12+00:00",
-      "task_count": 308,
+      "task_count": 313,
       "way_ids": [
         67799976,
         67799986,
@@ -20253,8 +20258,14 @@
         401039145,
         401039170,
         401039173,
-        401039212
-      ]
+        401039212,
+        67800564,
+        67800666,
+        67800713,
+        67800737,
+        67800868
+      ],
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55453": {
       "name": "Toronto address interpolation cleanup - Junction-Wallace Emerson",
@@ -20573,7 +20584,7 @@
         83673406,
         83673407
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55454": {
       "name": "Toronto address interpolation cleanup - Keelesdale-Eglinton West",
@@ -21477,7 +21488,7 @@
         401220268,
         401220652
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55457": {
       "name": "Toronto address interpolation cleanup - Kingsview Village-The Westway",
@@ -24321,7 +24332,7 @@
         401074399,
         401074576
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55466": {
       "name": "Toronto address interpolation cleanup - Malvern East",
@@ -27443,14 +27454,14 @@
         400834011,
         401233382
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55476": {
       "name": "Toronto address interpolation cleanup - Mount Pleasant East",
       "neighbourhood": "Mount Pleasant East",
       "created_at": "2026-06-14T03:06:10+00:00",
       "fetched_at": "2026-06-14T00:58:12+00:00",
-      "task_count": 332,
+      "task_count": 334,
       "way_ids": [
         66258884,
         66258895,
@@ -27783,8 +27794,11 @@
         401259793,
         401259810,
         401259827,
-        401259884
-      ]
+        401259884,
+        66259617,
+        66260305
+      ],
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55477": {
       "name": "Toronto address interpolation cleanup - Newtonbrook East",
@@ -28147,7 +28161,8 @@
         401024562,
         401024569,
         401024581
-      ]
+      ],
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55478": {
       "name": "Toronto address interpolation cleanup - Newtonbrook West",
@@ -29737,7 +29752,7 @@
         400999518,
         400999540
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55484": {
       "name": "Toronto address interpolation cleanup - Oakridge",
@@ -30272,7 +30287,7 @@
         67804617,
         401062544
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55486": {
       "name": "Toronto address interpolation cleanup - Old East York",
@@ -30560,7 +30575,7 @@
         66271101,
         401009415
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55487": {
       "name": "Toronto address interpolation cleanup - Palmerston-Little Italy",
@@ -30787,7 +30802,7 @@
         401074978,
         679516294
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55488": {
       "name": "Toronto address interpolation cleanup - Parkwoods-O'Connor Hills",
@@ -31590,7 +31605,7 @@
         66412900,
         66412926
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55491": {
       "name": "Toronto address interpolation cleanup - Pleasant View",
@@ -33260,7 +33275,7 @@
         66234892,
         690838653
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55497": {
       "name": "Toronto address interpolation cleanup - Rosedale-Moore Park",
@@ -34155,14 +34170,14 @@
         401074949,
         401075008
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55503": {
       "name": "Toronto address interpolation cleanup - South Riverdale",
       "neighbourhood": "South Riverdale",
       "created_at": "2026-06-14T03:32:17+00:00",
       "fetched_at": "2026-06-14T00:58:12+00:00",
-      "task_count": 551,
+      "task_count": 554,
       "way_ids": [
         66410550,
         66410564,
@@ -34714,8 +34729,12 @@
         401042168,
         401042257,
         401042351,
-        401042400
-      ]
+        401042400,
+        66411465,
+        66411772,
+        66412180
+      ],
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55504": {
       "name": "Toronto address interpolation cleanup - St Lawrence-East Bayfront-The Islands",
@@ -35943,7 +35962,7 @@
         401039150,
         401039234
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55508": {
       "name": "Toronto address interpolation cleanup - Tam O'Shanter-Sullivan",
@@ -37417,7 +37436,7 @@
         865939595,
         66266200
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55513": {
       "name": "Toronto address interpolation cleanup - Trinity-Bellwoods",
@@ -37786,7 +37805,7 @@
         662371570,
         662371571
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55514": {
       "name": "Toronto address interpolation cleanup - University",
@@ -37903,7 +37922,7 @@
         401216415,
         401216418
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55515": {
       "name": "Toronto address interpolation cleanup - Victoria Village",
@@ -39722,7 +39741,7 @@
         72386189,
         72386320
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55519": {
       "name": "Toronto address interpolation cleanup - West Queen West",
@@ -39848,7 +39867,7 @@
         731192923,
         731192924
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55520": {
       "name": "Toronto address interpolation cleanup - West Rouge",
@@ -40830,7 +40849,7 @@
         400998968,
         400999496
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55523": {
       "name": "Toronto address interpolation cleanup - Weston-Pelham Park",
@@ -41054,7 +41073,7 @@
         67804691,
         67804837
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55524": {
       "name": "Toronto address interpolation cleanup - Wexford/Maryvale",
@@ -41879,7 +41898,8 @@
         66407770,
         75967278,
         75967479
-      ]
+      ],
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55525": {
       "name": "Toronto address interpolation cleanup - Willowdale West",
@@ -43830,7 +43850,7 @@
         401074518,
         401074611
       ],
-      "refreshed_at": "2026-08-26T17:01:57+00:00"
+      "refreshed_at": "2026-09-02T16:58:25+00:00"
     },
     "55531": {
       "name": "Toronto address interpolation cleanup - Yonge-Bay Corridor",
