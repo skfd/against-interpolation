@@ -6,7 +6,7 @@ This task retires one OpenStreetMap `addr:interpolation` line on **{{street}}**,
 **For this line:** {{guidance}}
 
 ### 1. Verify the addresses
-Every house number above should be present, as an individual node or as the address on a building that carries only that one address.
+Where numbers are listed above, each should be present, as an individual node or as the address on a building that carries only that one address.
 
 - Split comma- or semicolon-separated addresses into individual nodes.
 - If a building carries one address and also has address nodes inside it, move its address onto a node of its own.

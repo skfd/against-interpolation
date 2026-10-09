@@ -41,7 +41,7 @@ neighbour_dbs = ["../ontario-address-changes/data/wellington/wellington.db"]
 
 [guidance]
 full = "The City has a point for every number listed above. Check each is mapped, as a node or as the only address on a building (the 2026 gap-fill import added most that were missing), then delete the line."
-partial = "The City has points only for the numbers listed above; the line's other numbers are estimates that never existed. Check each listed number is mapped, as a node or as the only address on a building, then delete the line."
+partial = "The City has points near this line only for the numbers listed above; the line's other numbers are estimates, and any real one is a City point mapped somewhere else. Check each listed number is mapped, as a node or as the only address on a building, then delete the line."
 uncovered = "The City has no address in this range on this street, so the line can only produce numbers that don't exist. It is a road-network range from CanVec or StatCan, not a list of houses. Unless you know of a house here the City has missed, delete the line."
 same_number = "This line runs from a number to the same number, so it interpolates nothing. Delete the line. Its two end nodes carry the same address: if that address is mapped somewhere else (a building or another node), delete both; if not, keep one."
 
