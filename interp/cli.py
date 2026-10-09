@@ -32,8 +32,13 @@ def cmd_fetch(args, cfg: Config) -> None:
 
 
 def cmd_build(args, cfg: Config) -> None:
-    from .t2bridge import source_db
+    from .t2bridge import BOUND_CITY, BOUND_CITY_DIR, source_db
 
+    if BOUND_CITY != cfg.city:
+        raise SystemExit(
+            f"The t2 engine is bound to {BOUND_CITY!r} ({BOUND_CITY_DIR}), not "
+            f"{cfg.city!r}. Run through run.py, which sets the city before "
+            f"the engine is imported.")
     ways = osm.load_cached(cfg)
     snap = source_db.latest_snapshot_id()
     print(f"Building coverage against source snapshot {snap} for {len(ways)} ways...")
@@ -43,12 +48,21 @@ def cmd_build(args, cfg: Config) -> None:
     hood_polys = hoods.load(cfg.data_dir, cfg.hoods_url, cfg.hood_name_field,
                             cfg.city_name)
     print(f"Loaded {len(hood_polys)} neighbourhood polygons.")
+    neighbours = {}
+    for db in cfg.neighbour_dbs:
+        for street, pts in coverage.neighbour_index(db).items():
+            neighbours.setdefault(street, []).extend(pts)
+    if cfg.neighbour_dbs:
+        print(f"Indexed {sum(len(v) for v in neighbours.values())} neighbour "
+              f"points from {len(cfg.neighbour_dbs)} source(s).")
 
     # Three-way split:
     #   outside  -- midpoint in no neighbourhood polygon: not Toronto, no task
     #   excluded -- Toronto, but uncovered/unknown: nothing to verify against
     #   tasks    -- full/partial coverage, tagged with its neighbourhood
     cats = Counter()
+    kinds = Counter()
+    held_by = Counter()
     by_hood = Counter()
     lines: list[str] = []
     excluded: list[str] = []
@@ -57,14 +71,31 @@ def cmd_build(args, cfg: Config) -> None:
         mid_lat, mid_lon = hoods.midpoint(way["geometry"])
         hood = hoods.locate(mid_lat, mid_lon, hood_polys)
         cov = coverage.coverage_for_way(way, index, cfg.match_radius_m)
+        kind = _task_kind(way, cov, index)
+        held = None
+        if hood is not None:
+            if cfg.require_all_nodes_inside and any(
+                    hoods.locate(lat, lon, hood_polys) is None
+                    for lat, lon in way["geometry"]):
+                held = "outside-city"
+            elif neighbours and (hits := coverage.neighbour_hits(
+                    way, neighbours, cfg.match_radius_m)):
+                held = "neighbour-addresses: " + ", ".join(map(str, hits))
         task_line = tasks.to_line(
-            tasks.build_feature_collection(way, cov, neighbourhood=hood)
+            tasks.build_feature_collection(
+                way, cov, neighbourhood=hood,
+                guidance=cfg.guidance.get(kind) if cfg.guidance else None,
+                held=held,
+            )
         )
         if hood is None:
             outside.append(task_line)
             continue
         cats[cov["category"]] += 1
-        if cov["category"] in ("uncovered", "unknown"):
+        kinds[kind] += 1
+        if held:
+            held_by[held.split(":")[0]] += 1
+        if held or kind not in cfg.task_categories:
             excluded.append(task_line)
         else:
             lines.append(task_line)
@@ -88,6 +119,9 @@ def cmd_build(args, cfg: Config) -> None:
         "excluded_count": len(excluded),
         "outside_count": len(outside),
         "by_category": dict(cats),
+        **({"by_kind": dict(kinds), "held": dict(held_by)}
+           if cfg.guidance or cfg.neighbour_dbs or cfg.require_all_nodes_inside
+           else {}),
         "by_neighbourhood": dict(by_hood.most_common()),
         "match_radius_m": cfg.match_radius_m,
     }
@@ -100,6 +134,27 @@ def cmd_build(args, cfg: Config) -> None:
     print(f"Cropped {len(outside)} ways outside {cfg.city_name} -> "
           f"{cfg.data_dir / _OUTSIDE_FILE}")
     _print_summary(summary, cfg.city_name)
+
+
+def _task_kind(way: dict, cov: dict, index: dict) -> str:
+    """The coverage category, refined where the category hides the reason:
+
+    same_number       an `unknown` line whose two numbered nodes carry the same
+                      number. N to N interpolates nothing, which is a reason to
+                      delete it, not a reason it can't be read.
+    unmatched_street  an `uncovered` line on a street the source has no points
+                      on at all (Glenholme for Glenholm Drive). "No address in
+                      range" means nothing there; the end nodes want fixing.
+    """
+    from .t2bridge import normalize_street
+
+    if (cov["category"] == "unknown" and len(way.get("anchors") or []) >= 2
+            and way.get("lo") is not None and way.get("lo") == way.get("hi")):
+        return "same_number"
+    if (cov["category"] == "uncovered" and way.get("street")
+            and normalize_street(way["street"]) not in index):
+        return "unmatched_street"
+    return cov["category"]
 
 
 def cmd_stats(args, cfg: Config) -> None:

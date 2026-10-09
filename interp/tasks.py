@@ -34,7 +34,8 @@ def _housenumbers(cov: dict) -> str:
 
 
 def build_feature_collection(
-    way: dict, cov: dict, neighbourhood: str | None = None
+    way: dict, cov: dict, neighbourhood: str | None = None,
+    guidance: str | None = None, held: str | None = None,
 ) -> dict:
     osm_way = f"way/{way['way_id']}"
     coords = [[lon, lat] for lat, lon in way["geometry"]]  # GeoJSON is lon,lat
@@ -48,6 +49,12 @@ def build_feature_collection(
         "housenumbers": _housenumbers(cov),
         "neighbourhood": neighbourhood or "",
     }
+    # Only cities that configure them get these, so Toronto's tasks are
+    # byte-identical to before they existed.
+    if guidance is not None:
+        properties["guidance"] = guidance
+    if held is not None:
+        properties["held"] = held
     geometry = (
         {"type": "LineString", "coordinates": coords}
         if len(coords) >= 2

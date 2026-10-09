@@ -20,3 +20,9 @@ from t2 import source_db  # noqa: E402
 from t2 import conflate  # noqa: E402
 
 normalize_street = conflate.normalize_street
+
+# Which city the engine was bound to, fixed at import. `cmd_build` checks it
+# against the city it was asked for, so a mis-ordered import fails loudly
+# instead of matching one city's lines against another city's addresses.
+BOUND_CITY = _cfg.city
+BOUND_CITY_DIR = os.environ["T2_CITY_DIR"]

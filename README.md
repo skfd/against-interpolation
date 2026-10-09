@@ -30,6 +30,40 @@ matching City points (`uncovered`) are likewise held back in
 `data/excluded.geojson` for manual review: a task with an empty house-number
 list gives a mapper nothing to verify against.
 
+## Cities
+
+Toronto is the default and keeps the original layout (`config.toml`,
+`data/`, `manifest.json`). Every other city is selected with `--city`, which
+goes before the command, and has its own `config.<city>.toml`, `data/<city>/`
+and `manifest.<city>.json`:
+
+```bash
+python run.py --city guelph fetch
+python run.py --city guelph build
+python run.py --city guelph create --by-neighbourhood --dry-run
+```
+
+**Guelph** (`config.guelph.toml`, `instructions/guelph.md`) differs from
+Toronto in what it tasks. The City's 2026 gap-fill import put every City
+address in OSM, so Guelph also tasks the lines Toronto holds back:
+`uncovered` (no City address in range: the line can only produce numbers that
+don't exist) and `same_number` (N to N interpolates nothing). Each task
+carries a `guidance` property, which the instruction embeds as
+`{{guidance}}`. Still held, in `excluded.geojson` with a `held` reason where
+one applies:
+
+- `unknown`: only one end is numbered. A hand case.
+- `unmatched_street`: the City has no street spelt like the end nodes'
+  (Glenholme for Glenholm Drive). The end nodes want fixing first.
+- `outside-city`: any node outside the 23 Guelph Areas, where the City's
+  roster doesn't speak.
+- `neighbour-addresses`: Wellington County has points on the line's street,
+  range and parity (Eramosa Road 706–768 holds 750 and 756, which only the
+  line records).
+
+The survey behind these rules is
+`guelph-address-import/mechanical-edits/interpolation-multinode/`.
+
 ## How it relates to the sibling projects
 
 - **Data** comes from the `address-importer-friend` engine (the `t2` package,

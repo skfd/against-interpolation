@@ -7,6 +7,7 @@ range is redundant with real points; a partially-covered one is not yet safe.
 We load every single-point Toronto address once, bucketed by normalized
 street, then answer each way in memory (one pass, no per-way SQL).
 """
+import sqlite3
 from collections import defaultdict
 
 from . import geo
@@ -34,6 +35,12 @@ def build_index(snap_id: int) -> dict[str, list[dict]]:
     # fields (lo_num, street, ...) through Toronto's [source_fields] recipe.
     lo = source_db.expr("lo_num", "")
     hi = source_db.expr("hi_num", "")
+    if lo == "NULL":
+        # A source with no range fields (Guelph publishes one number per
+        # point): the point's own number is its lo_num, and hi_num is NULL
+        # for every row. Without this every point was filtered out and every
+        # line read `uncovered`.
+        lo = f"CAST({source_db.expr('number', '')} AS INTEGER)"
     conn = source_db.connect_readonly()
     try:
         rows = conn.execute(
@@ -63,6 +70,46 @@ def build_index(snap_id: int) -> dict[str, list[dict]]:
             }
         )
     return index
+
+
+def neighbour_index(db_path: str) -> dict[str, list[dict]]:
+    """{normalized_street: [{num, lat, lon}]} from a neighbouring authority's
+    tracker DB (same `addresses` schema, plain `number`/`street` columns),
+    latest snapshot. Guelph's is Wellington County: past the city limit the
+    City's roster says nothing, and the County's points are what a deleted
+    line could lose."""
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    try:
+        latest = conn.execute(
+            "SELECT max(max_snapshot_id) FROM addresses").fetchone()[0]
+        rows = conn.execute(
+            "SELECT number, street, latitude, longitude FROM addresses "
+            "WHERE max_snapshot_id=?", (latest,)).fetchall()
+    finally:
+        conn.close()
+    index: dict[str, list[dict]] = defaultdict(list)
+    for number, street, lat, lon in rows:
+        if lat is None or lon is None or not str(number or "").isdigit():
+            continue
+        index[normalize_street(street)].append(
+            {"num": int(number), "lat": lat, "lon": lon})
+    return index
+
+
+def neighbour_hits(way: dict, index: dict[str, list[dict]],
+                   radius_m: float) -> list[int]:
+    """Neighbour-source numbers on the line's street, in its range (ends
+    included) and parity, within radius_m of the line."""
+    lo, hi, street = way.get("lo"), way.get("hi"), way.get("street")
+    geom = [tuple(p) for p in way.get("geometry", [])]
+    if lo is None or hi is None or lo == hi or not street or not geom:
+        return []
+    wanted = set(_parity_sequence(lo, hi, way.get("parity")))
+    return sorted({
+        p["num"] for p in index.get(normalize_street(street), [])
+        if p["num"] in wanted
+        and geo.point_to_polyline_m(p["lat"], p["lon"], geom) <= radius_m
+    })
 
 
 def coverage_for_way(

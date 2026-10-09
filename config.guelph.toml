@@ -1,0 +1,57 @@
+# Guelph: the second city. `python run.py --city guelph <command>`.
+# Data in data/guelph/, live challenges in manifest.guelph.json.
+
+[t2]
+root = "../address-importer-friend"
+# The Guelph city checkout; its config.toml supplies the City's SQLite path.
+city_dir = "../guelph-address-import"
+
+[city]
+name = "Guelph"
+# The 23 "Guelph Areas" polygons, the partition the import used. They serve
+# GeoJSON directly. Their union is the crop: a line whose midpoint is in no
+# Area is outside the city and gets no task.
+neighbourhoods_url = "https://gismaps.guelph.ca/hosting/rest/services/OpenData/OpenData2/FeatureServer/17/query?where=1%3D1&outFields=AREA_NAME,CSDNAME&outSR=4326&f=geojson"
+neighbourhood_name_field = "AREA_NAME"
+
+[osm]
+bbox = [43.47, -80.34, 43.60, -80.13]
+overpass_url = "https://overpass-api.de/api/interpreter"
+fallback_urls = ["https://overpass.private.coffee/api/interpreter",
+                 "https://maps.mail.ru/osm/tools/overpass/api/interpreter"]
+attempts = 10
+tile_deg = 0.05
+request_delay_s = 1.0
+user_agent = "against-interpolation (Guelph OSM cleanup; toronto@comentality.com)"
+
+[coverage]
+match_radius_m = 150
+# Guelph tasks more than Toronto does. Every City address is now in OSM
+# (the 2026-10 gap-fill import), so a line with no City point in range is
+# the clearest case for deletion, not the least clear: it can only produce
+# numbers that don't exist. Held back as hand cases: `unknown` (only one end
+# numbered) and `unmatched_street` (the City has no street spelt that way).
+task_categories = ["full", "partial", "uncovered", "same_number"]
+# The City's roster stops at the city limit. A line with any node outside the
+# 23 Areas is held; so is one spanning any Wellington County point on its
+# street, range and parity (Eramosa Road 706-768 even holds 750 and 756,
+# Guelph-Eramosa's, and the line is their only record in OSM).
+require_all_nodes_inside = true
+neighbour_dbs = ["../ontario-address-changes/data/wellington/wellington.db"]
+
+[guidance]
+full = "The City has a point for every number listed above. Check each is mapped, as a node or as the only address on a building (the 2026 gap-fill import added most that were missing), then delete the line."
+partial = "The City has points only for the numbers listed above; the line's other numbers are estimates that never existed. Check each listed number is mapped, as a node or as the only address on a building, then delete the line."
+uncovered = "The City has no address in this range on this street, so the line can only produce numbers that don't exist. It is a road-network range from CanVec or StatCan, not a list of houses. Unless you know of a house here the City has missed, delete the line."
+same_number = "This line runs from a number to the same number, so it interpolates nothing. Delete the line. Its two end nodes carry the same address: if that address is mapped somewhere else (a building or another node), delete both; if not, keep one."
+
+[maproulette]
+api_base = "https://maproulette.org/api/v2"
+# REQUIRED before `create`: the MapRoulette project the challenge lands in.
+# 0 makes `create` refuse.
+project_id = 0
+challenge_name = "Guelph address interpolation cleanup"
+instructions = "instructions/guelph.md"
+blurb = "Retire redundant addr:interpolation lines in Guelph, now that every City address is mapped."
+checkin_comment = "Removed redundant addr:interpolation line (City of Guelph address points) #maproulette #guelph-interpolation-cleanup"
+upload_batch_size = 1000

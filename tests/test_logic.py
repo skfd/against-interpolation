@@ -173,3 +173,117 @@ def test_refresh_plan_way_moved_hoods_not_reuploaded():
     assert alpha["gone"] == [] and alpha["new"] == []
     assert beta["gone"] == [] and beta["new"] == []
     assert orphans == []
+
+
+# --- second city (Guelph): retry, task kinds, neighbour hold, properties ---
+
+class _Resp:
+    def __init__(self, code):
+        self.status_code = code
+        self.headers = {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+
+class _Session:
+    def __init__(self, script):
+        self.script = list(script)
+        self.urls = []
+
+    def post(self, url, **kw):
+        self.urls.append(url)
+        step = self.script.pop(0)
+        if isinstance(step, Exception):
+            raise step
+        return _Resp(step)
+
+
+def _retry_cfg(attempts=10):
+    from interp.config import load
+    cfg = load(None)
+    cfg.overpass_url = "https://main/api"
+    cfg.overpass_fallback_urls = ["https://mirror/api"]
+    cfg.overpass_attempts = attempts
+    return cfg
+
+
+def test_post_tile_rotates_endpoints_and_rides_out_busy(monkeypatch):
+    import requests
+    from interp import osm
+    monkeypatch.setattr(osm.time, "sleep", lambda s: None)
+    s = _Session([504, requests.exceptions.ConnectionError(), 500, 200])
+    resp = osm._post_tile(s, _retry_cfg(), "q", {}, "tile 1/1")
+    assert resp.status_code == 200
+    assert s.urls == ["https://main/api", "https://mirror/api",
+                      "https://main/api", "https://mirror/api"]
+
+
+def test_post_tile_fails_fast_on_a_real_error(monkeypatch):
+    from interp import osm
+    monkeypatch.setattr(osm.time, "sleep", lambda s: None)
+    s = _Session([400])
+    try:
+        osm._post_tile(s, _retry_cfg(), "q", {}, "tile 1/1")
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("a 400 must not be retried")
+    assert len(s.urls) == 1
+
+
+def test_post_tile_gives_up_after_attempts(monkeypatch):
+    from interp import osm
+    monkeypatch.setattr(osm.time, "sleep", lambda s: None)
+    s = _Session([504] * 3)
+    try:
+        osm._post_tile(s, _retry_cfg(attempts=3), "q", {}, "tile 1/1")
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("expected the last 504 to raise")
+    assert len(s.urls) == 3
+
+
+def test_task_kind_same_number_and_unmatched_street():
+    from interp.cli import _task_kind
+    from interp.t2bridge import normalize_street
+    index = {normalize_street("Glenholm Drive"): [{"num": 20}]}
+    two_ends = [{"num": 306}, {"num": 306}]
+    assert _task_kind({"lo": 306, "hi": 306, "anchors": two_ends},
+                      {"category": "unknown"}, index) == "same_number"
+    # one numbered end: still unknown, a hand case
+    assert _task_kind({"lo": 80, "hi": 80, "anchors": [{"num": 80}]},
+                      {"category": "unknown"}, index) == "unknown"
+    assert _task_kind({"street": "Glenholme Drive"},
+                      {"category": "uncovered"}, index) == "unmatched_street"
+    assert _task_kind({"street": "Glenholm Drive"},
+                      {"category": "uncovered"}, index) == "uncovered"
+    assert _task_kind({}, {"category": "full"}, index) == "full"
+
+
+def test_neighbour_hits_range_parity_and_radius():
+    from interp.coverage import neighbour_hits
+    from interp.t2bridge import normalize_street
+    way = {"lo": 706, "hi": 768, "parity": "even", "street": "Eramosa Road",
+           "geometry": [(43.58, -80.24), (43.58, -80.23)]}
+    near, far = (43.5803, -80.235), (43.59, -80.235)  # ~33 m, ~1.1 km
+    pts = [{"num": 750, "lat": near[0], "lon": near[1]},   # hit
+           {"num": 751, "lat": near[0], "lon": near[1]},   # wrong parity
+           {"num": 800, "lat": near[0], "lon": near[1]},   # out of range
+           {"num": 756, "lat": far[0], "lon": far[1]}]     # too far
+    idx = {normalize_street("Eramosa Road"): pts}
+    assert neighbour_hits(way, idx, 150) == [750]
+    assert neighbour_hits({**way, "hi": 706}, idx, 150) == []  # N to N
+
+
+def test_feature_collection_extra_properties_only_when_given():
+    way = {"way_id": 7, "lo": 1, "hi": 9, "parity": "odd", "street": "A St",
+           "geometry": [(43.0, -80.0), (43.0, -80.001)]}
+    cov = {"category": "full", "items": [{"num": 1, "present": True}]}
+    props = tasks.build_feature_collection(way, cov)["features"][0]["properties"]
+    assert "guidance" not in props and "held" not in props
+    props = tasks.build_feature_collection(
+        way, cov, guidance="g", held="outside-city")["features"][0]["properties"]
+    assert props["guidance"] == "g" and props["held"] == "outside-city"

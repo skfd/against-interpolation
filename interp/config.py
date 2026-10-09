@@ -62,6 +62,10 @@ class Config:
     # points on the line's street, in its range and parity, within
     # match_radius_m, holds the line back: deleting it could lose them.
     neighbour_dbs: list[str] = field(default_factory=list)
+    # Per-task `guidance` text by task kind (full, partial, uncovered,
+    # same_number), embedded by the instruction as {{guidance}}. Toronto has
+    # none, and its tasks carry no such property.
+    guidance: dict[str, str] = field(default_factory=dict)
     mr_blurb: str = "Retire redundant addr:interpolation lines in Toronto."
     mr_checkin_comment: str = (
         "Removed redundant addr:interpolation line (Toronto Open Data points) "
@@ -120,6 +124,7 @@ def load(city: str | None = None) -> Config:
     out.require_all_nodes_inside = bool(
         cov.get("require_all_nodes_inside", out.require_all_nodes_inside))
     out.neighbour_dbs = [str((ROOT / p).resolve()) for p in cov.get("neighbour_dbs", [])]
+    out.guidance = {str(k): str(v) for k, v in cfg.get("guidance", {}).items()}
     out.mr_blurb = str(mr.get("blurb", out.mr_blurb))
     out.mr_checkin_comment = str(mr.get("checkin_comment", out.mr_checkin_comment))
     return out
