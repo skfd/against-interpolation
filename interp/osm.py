@@ -97,7 +97,7 @@ def fetch(cfg: Config, force: bool = False) -> list[dict]:
 
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
-    headers = {"User-Agent": "against-interpolation (Toronto OSM cleanup)"}
+    headers = {"User-Agent": cfg.user_agent}
 
     by_id: dict[int, dict] = {}
     tiles = list(_tiles(cfg.toronto_bbox, cfg.tile_deg))

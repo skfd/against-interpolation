@@ -1,6 +1,7 @@
-"""Toronto neighbourhood boundaries: download once from Toronto Open Data,
-then assign each interpolation way to a neighbourhood by point-in-polygon on
-the way's midpoint.
+"""Neighbourhood boundaries: download once from the city's open data, then
+assign each interpolation way to a neighbourhood by point-in-polygon on the
+way's midpoint. Toronto's 158 come through CKAN; another city's URL may serve
+GeoJSON directly (Guelph's 23 Areas, an ArcGIS `f=geojson` query).
 
 The 158 neighbourhood polygons union to exactly the city boundary, so this
 doubles as the Toronto crop: a way whose midpoint falls in no polygon is
@@ -19,8 +20,13 @@ _CKAN_PACKAGE = (
 _FILE = "neighbourhoods.geojson"
 
 
-def _download(path: Path) -> None:
-    meta = requests.get(_CKAN_PACKAGE, timeout=60).json()
+def _download(path: Path, url: str = _CKAN_PACKAGE) -> None:
+    if "package_show" not in url:  # serves the GeoJSON itself
+        resp = requests.get(url, timeout=120)
+        resp.raise_for_status()
+        path.write_bytes(resp.content)
+        return
+    meta = requests.get(url, timeout=60).json()
     resources = meta["result"]["resources"]
     # The bare "Neighbourhoods" GeoJSON resource is a datastore dump that
     # actually serves CSV; we want the real file export of the current
@@ -38,21 +44,22 @@ def _download(path: Path) -> None:
     path.write_bytes(resp.content)
 
 
-def load(data_dir: Path) -> list[tuple]:
+def load(data_dir: Path, url: str = _CKAN_PACKAGE, name_field: str = "AREA_NAME",
+         city_name: str = "Toronto") -> list[tuple]:
     """[(name, rings, bbox), ...] where rings = [[(lon, lat), ...], ...]
     (outer rings and holes together; containment is even-odd across them all)
     and bbox = (min_lon, min_lat, max_lon, max_lat) for prefiltering."""
     path = data_dir / _FILE
     if not path.exists():
         data_dir.mkdir(parents=True, exist_ok=True)
-        print("Downloading Toronto neighbourhood boundaries...")
-        _download(path)
+        print(f"Downloading {city_name} neighbourhood boundaries...")
+        _download(path, url)
     fc = json.loads(path.read_text(encoding="utf-8"))
 
     hoods = []
     for feat in fc["features"]:
         props = feat.get("properties", {})
-        name = props.get("AREA_NAME") or next(
+        name = props.get(name_field) or next(
             (v for k, v in props.items() if "NAME" in k.upper()), "?"
         )
         # Older releases embed the area code in the name: "Casa Loma (96)".

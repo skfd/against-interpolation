@@ -76,7 +76,11 @@ def validate_project(api_base: str, project_id: int) -> str:
 
 
 def create_challenge(
-    api_base: str, project_id: int, name: str, instruction: str
+    api_base: str, project_id: int, name: str, instruction: str,
+    blurb: str = "Retire redundant addr:interpolation lines in Toronto.",
+    checkin_comment: str = (
+        "Removed redundant addr:interpolation line (Toronto Open Data points) "
+        "#maproulette #toronto-interpolation-cleanup"),
 ) -> int:
     """Create an empty challenge under the project; return its id."""
     s = _session(_api_key())
@@ -84,8 +88,8 @@ def create_challenge(
         "name": name,
         "description": name,
         "instruction": instruction,
-        "blurb": "Retire redundant addr:interpolation lines in Toronto.",
-        "checkinComment": "Removed redundant addr:interpolation line (Toronto Open Data points) #maproulette #toronto-interpolation-cleanup",
+        "blurb": blurb,
+        "checkinComment": checkin_comment,
         "enabled": True,
         "difficulty": 3,  # 1=easy, 2=normal, 3=expert
         "requiresLocal": True,  # requires local / specialized knowledge

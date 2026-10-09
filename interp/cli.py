@@ -1,12 +1,13 @@
 """Command-line entry point: fetch -> build -> create."""
 import argparse
 import json
+import os
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
 from . import coverage, hoods, osm, tasks
-from .config import ROOT, Config, load
+from .config import CITY_ENV, Config, load
 
 _TASKS_FILE = "tasks.geojson"
 _EXCLUDED_FILE = "excluded.geojson"
@@ -39,7 +40,8 @@ def cmd_build(args, cfg: Config) -> None:
     index = coverage.build_index(snap)
     print(f"Indexed {sum(len(v) for v in index.values())} city points on "
           f"{len(index)} streets.")
-    hood_polys = hoods.load(cfg.data_dir)
+    hood_polys = hoods.load(cfg.data_dir, cfg.hoods_url, cfg.hood_name_field,
+                            cfg.city_name)
     print(f"Loaded {len(hood_polys)} neighbourhood polygons.")
 
     # Three-way split:
@@ -93,22 +95,22 @@ def cmd_build(args, cfg: Config) -> None:
         json.dumps(summary, indent=2), encoding="utf-8"
     )
     print(f"\nWrote {len(lines)} tasks to {out}")
-    print(f"Excluded {len(excluded)} uncovered/unknown Toronto ways -> "
+    print(f"Excluded {len(excluded)} {cfg.city_name} ways held back -> "
           f"{cfg.data_dir / _EXCLUDED_FILE}")
-    print(f"Cropped {len(outside)} ways outside Toronto -> "
+    print(f"Cropped {len(outside)} ways outside {cfg.city_name} -> "
           f"{cfg.data_dir / _OUTSIDE_FILE}")
-    _print_summary(summary)
+    _print_summary(summary, cfg.city_name)
 
 
 def cmd_stats(args, cfg: Config) -> None:
     path = cfg.data_dir / _SUMMARY_FILE
     if not path.exists():
         raise SystemExit("No summary.json — run `build` first.")
-    _print_summary(json.loads(path.read_text(encoding="utf-8")))
+    _print_summary(json.loads(path.read_text(encoding="utf-8")), cfg.city_name)
 
 
-def _print_summary(summary: dict) -> None:
-    print("\nCoverage breakdown (Toronto ways):")
+def _print_summary(summary: dict, city_name: str = "Toronto") -> None:
+    print(f"\nCoverage breakdown ({city_name} ways):")
     by = summary["by_category"]
     total = sum(by.values()) or 1
     for cat in ("full", "partial", "uncovered", "unknown"):
@@ -116,7 +118,7 @@ def _print_summary(summary: dict) -> None:
         print(f"  {cat:<10} {n:>7}  ({100 * n / total:4.1f}%)")
     print(f"  {'TOTAL':<10} {total:>7}")
     if summary.get("outside_count"):
-        print(f"  (+{summary['outside_count']} ways outside Toronto, cropped)")
+        print(f"  (+{summary['outside_count']} ways outside {city_name}, cropped)")
     by_hood = summary.get("by_neighbourhood") or {}
     if by_hood:
         print(f"\nTasks span {len(by_hood)} neighbourhoods; largest:")
@@ -143,12 +145,11 @@ def _warn_if_stale(fetched: str | None) -> None:
 
 
 def _record_in_manifest(
-    project_id: int, challenge_id: int, name: str, hood: str | None,
+    path, project_id: int, challenge_id: int, name: str, hood: str | None,
     lines: list[str], fetched: str | None,
 ) -> None:
     """Append a created challenge (and the way ids it covers) to the committed
     manifest, so `refresh` can diff live tasks against current OSM."""
-    path = ROOT / "manifest.json"
     manifest = (
         json.loads(path.read_text(encoding="utf-8"))
         if path.exists()
@@ -192,7 +193,7 @@ def cmd_create(args, cfg: Config) -> None:
     if args.limit:
         task_lines = task_lines[: args.limit]
 
-    instruction = Path("instructions/interpolation.md").read_text(encoding="utf-8")
+    instruction = cfg.instructions_path.read_text(encoding="utf-8")
 
     fetched = _summary_fetched_at(cfg)
     _warn_if_stale(fetched)
@@ -238,13 +239,15 @@ def cmd_create(args, cfg: Config) -> None:
     for hood, lines in sorted(groups.items(), key=lambda kv: kv[0] or ""):
         full_name = f"{challenge_name} - {hood}" if hood else challenge_name
         challenge_id = maproulette.create_challenge(
-            cfg.mr_api_base, project_id, full_name, instruction
+            cfg.mr_api_base, project_id, full_name, instruction,
+            blurb=cfg.mr_blurb, checkin_comment=cfg.mr_checkin_comment,
         )
         print(f"Created challenge {challenge_id} '{full_name}'. Uploading "
               f"{len(lines)} tasks...")
         maproulette.add_tasks(cfg.mr_api_base, challenge_id, lines)
         _record_in_manifest(
-            project_id, challenge_id, full_name, hood, lines, fetched
+            cfg.manifest_path, project_id, challenge_id, full_name, hood,
+            lines, fetched,
         )
     print(
         f"Done. View: https://maproulette.org/admin/project/{project_id}"
@@ -254,9 +257,10 @@ def cmd_create(args, cfg: Config) -> None:
 def cmd_refresh(args, cfg: Config) -> None:
     from . import maproulette, refresh
 
-    manifest_path = ROOT / "manifest.json"
+    manifest_path = cfg.manifest_path
     if not manifest_path.exists():
-        raise SystemExit("No manifest.json — nothing to refresh (run `create` first).")
+        raise SystemExit(f"No {manifest_path.name} — nothing to refresh "
+                         f"(run `create` first).")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     ways = osm.load_cached(cfg)
@@ -360,8 +364,10 @@ def cmd_refresh(args, cfg: Config) -> None:
 
 
 def main(argv=None) -> None:
-    cfg = load()
     p = argparse.ArgumentParser(prog="against-interpolation")
+    p.add_argument("--city", default="toronto",
+                   help="toronto (config.toml, the default) or <city> "
+                        "(config.<city>.toml, data/<city>/, manifest.<city>.json)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     f = sub.add_parser("fetch", help="enumerate interpolation ways from OSM")
@@ -397,6 +403,10 @@ def main(argv=None) -> None:
     r.set_defaults(func=cmd_refresh)
 
     args = p.parse_args(argv)
+    # Before load() and before anything imports t2bridge, which reads the
+    # config at import time to point the engine at the city checkout.
+    os.environ[CITY_ENV] = args.city
+    cfg = load()
     args.func(args, cfg)
 
 
