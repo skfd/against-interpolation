@@ -89,6 +89,49 @@ def _normalize_way(way: dict, nodes: dict[int, dict]) -> dict | None:
     }
 
 
+_BUSY = (429, 500, 502, 503, 504)
+
+
+def _post_tile(session, cfg: Config, query: str, headers: dict, label: str):
+    """POST one tile, riding out an overloaded Overpass.
+
+    The weekly refresh runs unattended at noon, when overpass-api.de sheds
+    load with 504s for long stretches: five tries over five minutes failed
+    every Wednesday from 2026-09-09 to 2026-10-07, each time on the first
+    tile. So: more tries, waits growing to five minutes, and each try on the
+    next endpoint in turn (the main one, then config `fallback_urls`), so one
+    busy server does not sink the run. A timeout or dropped connection counts
+    as busy. Anything else (a 400, a bad query) still fails at once.
+    """
+    urls = [cfg.overpass_url, *cfg.overpass_fallback_urls]
+    attempts = max(1, cfg.overpass_attempts)
+    for attempt in range(attempts):
+        url = urls[attempt % len(urls)]
+        last = attempt == attempts - 1
+        try:
+            resp = session.post(url, data={"data": query}, headers=headers,
+                                timeout=200)
+        except (requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError) as e:
+            if last:
+                raise
+            why = type(e).__name__
+        else:
+            if resp.status_code not in _BUSY or last:
+                resp.raise_for_status()
+                return resp
+            why = str(resp.status_code)
+            retry_after = resp.headers.get("Retry-After") or ""
+        wait = min(30 * (attempt + 1), 300)
+        if why.isdigit() and retry_after.isdigit():
+            wait = int(retry_after)
+        host = url.split("/")[2]
+        print(f"  {label}: {host} busy ({why}); try {attempt + 2}/{attempts} "
+              f"in {wait}s...")
+        time.sleep(wait)
+    raise AssertionError("unreachable")
+
+
 def fetch(cfg: Config, force: bool = False) -> list[dict]:
     """Fetch + cache all interpolation ways in the configured bbox."""
     out_path = cfg.data_dir / "interpolation_ways.json"
@@ -104,21 +147,8 @@ def fetch(cfg: Config, force: bool = False) -> list[dict]:
     for i, tile in enumerate(tiles, 1):
         # Overpass throttles with 429 (and sheds load with 504); one busy
         # moment shouldn't kill a 66-tile sweep. Back off and retry the tile.
-        for attempt in range(5):
-            resp = session.post(
-                cfg.overpass_url,
-                data={"data": _query(tile)},
-                headers=headers,
-                timeout=200,
-            )
-            if resp.status_code in (429, 504) and attempt < 4:
-                wait = int(resp.headers.get("Retry-After") or 0) or 30 * (attempt + 1)
-                print(f"  tile {i}/{len(tiles)}: Overpass busy "
-                      f"({resp.status_code}); retrying in {wait}s...")
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            break
+        resp = _post_tile(session, cfg, _query(tile), headers,
+                          f"tile {i}/{len(tiles)}")
         elements = resp.json().get("elements", [])
         nodes = {
             el["id"]: el for el in elements if el.get("type") == "node"

@@ -15,6 +15,13 @@ city_dir = "../toronto-2-address-import"
 # City-of-Toronto-ish clip. Same rectangle the import uses.
 toronto_bbox = [43.58, -79.64, 43.86, -79.11]
 overpass_url = "https://overpass-api.de/api/interpreter"
+# Tried in turn with the main one when it keeps answering 429/50x. The weekly
+# refresh failed five Wednesdays running (2026-09-09..10-07) on 504s from
+# overpass-api.de alone.
+fallback_urls = ["https://overpass.private.coffee/api/interpreter",
+                 "https://maps.mail.ru/osm/tools/overpass/api/interpreter"]
+# Tries per tile across all endpoints; waits grow 30 s per try, capped at 5 min.
+attempts = 10
 # The bbox is fetched as a grid of tiles this many degrees on a side, so a
 # single Overpass request never has to return the whole city's worth of
 # interpolation ways. ~0.05 deg keeps each tile a few thousand ways.
