@@ -2,7 +2,7 @@
 
 Generates MapRoulette tasks to retire redundant `addr:interpolation` lines in
 Toronto. This is the cleanup phase that the sibling
-[`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import)
+[`toronto-2-address-import`](https://github.com/toronto-maps/toronto-2-address-import)
 project deferred as out of scope: now that the City's per-address points are in
 OSM, the old StatCan/CanVec interpolation lines that span the same blocks can be
 removed.
@@ -14,7 +14,7 @@ and walks a mapper through two steps:
 
 1. **Verify the addresses** — every City house number present as an individual
    node, or as an address on a building when that building has only the one
-   address. The [Toronto Address Layer](https://skfd.github.io/toronto-addresses-layer/)
+   address. The [Toronto Address Layer](https://toronto-maps.github.io/toronto-addresses-layer/)
    helps spot misaligned or missing ones.
 2. **Remove the interpolation line** — delete the endpoint nodes (the editor
    takes the way with them); keep an endpoint that is part of a building or
@@ -68,7 +68,7 @@ The survey behind these rules is
 
 - **Data** comes from the `address-importer-friend` engine (the `t2` package,
   forked out of
-  [`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import)),
+  [`toronto-2-address-import`](https://github.com/toronto-maps/toronto-2-address-import)),
   which `build` requires. We import `t2` read-only for the Toronto address DB
   (`source_db`) and the street-name normalizer (`conflate.normalize_street`).
   Set the engine's location in `config.toml` under `[t2] root` and the Toronto
@@ -98,7 +98,7 @@ Then edit `config.toml`:
   `t2` package), relative to this project or absolute. Defaults to a sibling
   checkout.
 - `[t2] city_dir` — path to the
-  [`toronto-2-address-import`](https://github.com/skfd/toronto-2-address-import)
+  [`toronto-2-address-import`](https://github.com/toronto-maps/toronto-2-address-import)
   city checkout. `build` reads its address DB, so clone it too. Defaults to a
   sibling checkout.
 - `[maproulette] project_id` — the MapRoulette project the challenge lands in

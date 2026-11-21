@@ -9,7 +9,7 @@ Verify that every house number above is present — as an individual node, or as
 - Split comma/semicolon-separated addresses into individual nodes.
 - Extract the address off a building into its own node if the building already carries another address node.
 
-Use the [Toronto Address Layer](https://skfd.github.io/toronto-addresses-layer/) for reference if any address looks misaligned or missing.
+Use the [Toronto Address Layer](https://toronto-maps.github.io/toronto-addresses-layer/) for reference if any address looks misaligned or missing.
 
 ### 2. Remove the interpolation line
 Once every number above is present as a real point/building, delete the `addr:interpolation` way. Select the endpoint **nodes** and delete them — the editor then selects the rest of the way; if you delete the way directly, the endpoint nodes are left behind.
